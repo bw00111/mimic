@@ -21,12 +21,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     
-    <!-- Material Icons -->
+    <!-- Material Icons & Fonts -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
     <style>
-        /* Material 3 Light Theme Variables */
         :root {
             --md-sys-color-primary: #6750A4;
             --md-sys-color-on-primary: #FFFFFF;
@@ -61,227 +60,73 @@
             overflow: hidden;
         }
 
-        /* --- MATERIAL 3 COMPONENTS --- */
         .m3-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            height: 40px;
-            padding: 0 24px;
-            border-radius: 20px;
-            border: none;
-            font-family: var(--md-ref-typeface);
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: box-shadow 200ms, background-color 200ms;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            height: 40px; padding: 0 24px; border-radius: 20px; border: none;
+            font-family: var(--md-ref-typeface); font-size: 14px; font-weight: 500;
+            cursor: pointer; transition: box-shadow 200ms, background-color 200ms;
         }
-        .m3-btn-filled {
-            background-color: var(--md-sys-color-primary);
-            color: var(--md-sys-color-on-primary);
-            box-shadow: var(--md-sys-elevation-1);
-        }
+        .m3-btn-filled { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); box-shadow: var(--md-sys-elevation-1); }
         .m3-btn-filled:hover { box-shadow: var(--md-sys-elevation-2); }
-        
-        .m3-btn-outlined {
-            background-color: transparent;
-            color: var(--md-sys-color-primary);
-            border: 1px solid var(--md-sys-color-outline);
-        }
+        .m3-btn-outlined { background-color: transparent; color: var(--md-sys-color-primary); border: 1px solid var(--md-sys-color-outline); }
         .m3-btn-outlined:hover { background-color: rgba(103, 80, 164, 0.08); }
-
-        .m3-btn-tonal {
-            background-color: var(--md-sys-color-secondary-container);
-            color: var(--md-sys-color-on-secondary-container);
-        }
+        .m3-btn-tonal { background-color: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
         .m3-btn-tonal:hover { box-shadow: var(--md-sys-elevation-1); }
-
-        .m3-btn-text {
-            background-color: transparent;
-            color: var(--md-sys-color-primary);
-            padding: 0 12px;
-        }
+        .m3-btn-text { background-color: transparent; color: var(--md-sys-color-primary); padding: 0 12px; }
         .m3-btn-text:hover { background-color: rgba(103, 80, 164, 0.08); }
-
         .m3-icon-btn {
-            width: 40px; height: 40px;
-            border-radius: 20px;
-            border: none;
-            background: transparent;
-            color: var(--md-sys-color-on-surface-variant);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 40px; height: 40px; border-radius: 20px; border: none; background: transparent;
+            color: var(--md-sys-color-on-surface-variant); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
         }
         .m3-icon-btn:hover { background-color: rgba(28, 27, 31, 0.08); }
 
         .m3-card-elevated {
-            background-color: var(--md-sys-color-surface-container-low);
-            border-radius: 12px;
-            box-shadow: var(--md-sys-elevation-1);
-            padding: 16px;
-            cursor: pointer;
+            background-color: var(--md-sys-color-surface-container-low); border-radius: 12px;
+            box-shadow: var(--md-sys-elevation-1); padding: 16px; cursor: pointer;
             transition: box-shadow 200ms, transform 150ms;
         }
-        .m3-card-elevated:hover {
-            box-shadow: var(--md-sys-elevation-2);
-            transform: translateY(-2px);
-        }
+        .m3-card-elevated:hover { box-shadow: var(--md-sys-elevation-2); transform: translateY(-2px); }
 
         .m3-dialog-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background-color: rgba(0,0,0,0.4);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
+            display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.4);
+            z-index: 1000; justify-content: center; align-items: center;
         }
         .m3-dialog-overlay.active { display: flex; }
-        
-        .m3-dialog {
-            background-color: var(--md-sys-color-surface-container-high);
-            border-radius: 28px;
-            padding: 24px;
-            min-width: 320px;
-            max-width: 560px;
-            box-shadow: var(--md-sys-elevation-3);
-        }
+        .m3-dialog { background-color: var(--md-sys-color-surface-container-high); border-radius: 28px; padding: 24px; min-width: 320px; max-width: 560px; box-shadow: var(--md-sys-elevation-3); }
         .m3-dialog-title { font-size: 24px; font-weight: 500; margin-bottom: 16px; color: var(--md-sys-color-on-surface); }
         .m3-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
-
         .m3-textfield {
-            width: 100%;
-            padding: 16px;
-            border-radius: 12px;
-            border: 1px solid var(--md-sys-color-outline);
-            background: transparent;
-            color: var(--md-sys-color-on-surface);
-            font-family: var(--md-ref-typeface);
-            font-size: 16px;
-            outline: none;
-            transition: border-color 200ms;
+            width: 100%; padding: 16px; border-radius: 12px; border: 1px solid var(--md-sys-color-outline);
+            background: transparent; color: var(--md-sys-color-on-surface); font-family: var(--md-ref-typeface);
+            font-size: 16px; outline: none; transition: border-color 200ms;
         }
         .m3-textfield:focus { border-color: var(--md-sys-color-primary); }
 
-        /* --- LAYOUT --- */
-        .loading-screen {
-            position: fixed; inset: 0;
-            background: var(--md-sys-color-surface);
-            display: flex; justify-content: center; align-items: center;
-            z-index: 9999;
-        }
-        .loading-spinner {
-            width: 48px; height: 48px;
-            border: 4px solid var(--md-sys-color-surface-container-highest);
-            border-top-color: var(--md-sys-color-primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
+        .loading-screen { position: fixed; inset: 0; background: var(--md-sys-color-surface); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .loading-spinner { width: 48px; height: 48px; border: 4px solid var(--md-sys-color-surface-container-highest); border-top-color: var(--md-sys-color-primary); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* --- PROJECT LIST VIEW --- */
-        #view-projects {
-            height: 100vh;
-            overflow-y: auto;
-            padding: 32px;
-            background-color: var(--md-sys-color-surface-dim);
-        }
-        .projects-header {
-            max-width: 1200px;
-            margin: 0 auto 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        #view-projects { height: 100vh; overflow-y: auto; padding: 32px; background-color: var(--md-sys-color-surface-dim); }
+        .projects-header { max-width: 1200px; margin: 0 auto 24px; display: flex; justify-content: space-between; align-items: center; }
         .projects-title { font-size: 28px; font-weight: 700; color: var(--md-sys-color-on-surface); }
-        .projects-grid {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 16px;
-        }
+        .projects-grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 
-        /* --- EDITOR VIEW --- */
         #view-editor { display: none; height: 100vh; flex-direction: column; background: var(--md-sys-color-surface); }
-        
-        .editor-top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 16px;
-            background-color: var(--md-sys-color-surface);
-            border-bottom: 1px solid var(--md-sys-color-outline-variant);
-        }
-        .project-name-input {
-            border: none;
-            background: transparent;
-            font-size: 18px;
-            font-weight: 500;
-            color: var(--md-sys-color-on-surface);
-            width: 250px;
-            padding: 8px;
-            border-radius: 8px;
-        }
+        .editor-top-bar { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--md-sys-color-outline-variant); }
+        .project-name-input { border: none; background: transparent; font-size: 18px; font-weight: 500; color: var(--md-sys-color-on-surface); width: 250px; padding: 8px; border-radius: 8px; }
         .project-name-input:focus { background-color: var(--md-sys-color-surface-container-high); outline: none; }
         
-        .file-tabs-container {
-            display: flex;
-            align-items: center;
-            background-color: var(--md-sys-color-surface-container);
-            padding: 0 8px;
-            overflow-x: auto;
-        }
-        .file-tab {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            font-size: 14px;
-            color: var(--md-sys-color-on-surface-variant);
-            border-bottom: 2px solid transparent;
-            cursor: pointer;
-            white-space: nowrap;
-            position: relative;
-        }
-        .file-tab.active {
-            color: var(--md-sys-color-primary);
-            border-bottom-color: var(--md-sys-color-primary);
-            background-color: var(--md-sys-color-surface-container-lowest);
-            border-radius: 8px 8px 0 0;
-        }
-        .file-tab .delete-file-btn {
-            margin-left: 8px;
-            width: 18px; height: 18px;
-            border-radius: 50%;
-            border: none;
-            background: transparent;
-            color: var(--md-sys-color-on-surface-variant);
-            font-size: 16px;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            line-height: 1;
-        }
+        .file-tabs-container { display: flex; align-items: center; background-color: var(--md-sys-color-surface-container); padding: 0 8px; overflow-x: auto; }
+        .file-tab { display: flex; align-items: center; padding: 12px 16px; font-size: 14px; color: var(--md-sys-color-on-surface-variant); border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; position: relative; }
+        .file-tab.active { color: var(--md-sys-color-primary); border-bottom-color: var(--md-sys-color-primary); background-color: var(--md-sys-color-surface-container-lowest); border-radius: 8px 8px 0 0; }
+        .file-tab .delete-file-btn { margin-left: 8px; width: 18px; height: 18px; border-radius: 50%; border: none; background: transparent; color: var(--md-sys-color-on-surface-variant); font-size: 16px; cursor: pointer; display: none; align-items: center; justify-content: center; line-height: 1; }
         .file-tab:hover .delete-file-btn { display: flex; }
         .file-tab .delete-file-btn:hover { background-color: rgba(179, 38, 30, 0.1); color: var(--md-sys-color-error); }
-
         .editor-area { flex-grow: 1; overflow: hidden; }
 
-        /* CodeMirror Material 3 Overrides */
-        .CodeMirror {
-            height: 100%;
-            background-color: var(--md-sys-color-surface-container-lowest);
-            color: var(--md-sys-color-on-surface);
-            font-family: 'Roboto Mono', monospace;
-        }
-        .CodeMirror-gutters {
-            background-color: var(--md-sys-color-surface-container-low);
-            border-right: 1px solid var(--md-sys-color-outline-variant);
-        }
+        .CodeMirror { height: 100%; background-color: var(--md-sys-color-surface-container-lowest); color: var(--md-sys-color-on-surface); font-family: 'Roboto Mono', monospace; }
+        .CodeMirror-gutters { background-color: var(--md-sys-color-surface-container-low); border-right: 1px solid var(--md-sys-color-outline-variant); }
         .CodeMirror-linenumber { color: var(--md-sys-color-outline); }
         .CodeMirror-cursor { border-left: 2px solid var(--md-sys-color-primary); }
         .CodeMirror-selected { background: rgba(103, 80, 164, 0.2) !important; }
@@ -292,42 +137,21 @@
         .cm-s-default .cm-tag { color: #0061A4; }
         .cm-s-default .cm-attribute { color: #6750A4; }
 
-        /* Public Render View */
         #view-render { display: none; position: fixed; inset: 0; background: white; z-index: -1; }
         #view-render iframe { width: 100%; height: 100%; border: none; }
 
-        /* Notification SnackBar */
-        .snackbar {
-            position: fixed;
-            bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background-color: var(--md-sys-color-on-surface);
-            color: var(--md-sys-color-surface);
-            padding: 14px 24px;
-            border-radius: 12px;
-            font-size: 14px;
-            z-index: 2000;
-            transition: transform 300ms cubic-bezier(0.2, 0, 0, 1);
-            box-shadow: var(--md-sys-elevation-3);
-        }
+        .snackbar { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background-color: var(--md-sys-color-on-surface); color: var(--md-sys-color-surface); padding: 14px 24px; border-radius: 12px; font-size: 14px; z-index: 2000; transition: transform 300ms cubic-bezier(0.2, 0, 0, 1); box-shadow: var(--md-sys-elevation-3); }
         .snackbar.show { transform: translateX(-50%) translateY(0); }
 
-        .share-link-box {
-            display: flex; gap: 8px; margin-bottom: 12px; align-items: center;
-        }
-        .share-link-box input {
-            flex: 1; padding: 10px; border: 1px solid var(--md-sys-color-outline); border-radius: 8px;
-            background: var(--md-sys-color-surface-container-lowest); color: var(--md-sys-color-on-surface); font-size: 14px;
-        }
-
+        .share-link-box { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+        .share-link-box input { flex: 1; padding: 10px; border: 1px solid var(--md-sys-color-outline); border-radius: 8px; background: var(--md-sys-color-surface-container-lowest); color: var(--md-sys-color-on-surface); font-size: 14px; }
     </style>
 </head>
 <body>
 
     <div class="loading-screen" id="loading"><div class="loading-spinner"></div></div>
 
-    <!-- VIEW 1: Project List -->
+    <!-- VIEW 1: Projects -->
     <div id="view-projects" style="display:none;">
         <div class="projects-header">
             <h1 class="projects-title">Mimic</h1>
@@ -358,47 +182,39 @@
                 </button>
             </div>
         </div>
-        <div class="file-tabs-container" id="file-tabs">
-            <!-- Tabs injected here -->
-            <button class="m3-icon-btn" id="btn-add-file" title="Add File"><span class="material-icons-round">note_add</span></button>
-        </div>
+        <div class="file-tabs-container" id="file-tabs"></div>
         <div class="editor-area">
             <textarea id="cm-textarea"></textarea>
         </div>
     </div>
 
-    <!-- VIEW 3: Public Renderer (Fallback 404 view) -->
+    <!-- VIEW 3: Render (for /pub/ and /pv/) -->
     <div id="view-render"><iframe id="render-iframe"></iframe></div>
 
     <!-- MODALS -->
-    <!-- Add File Modal -->
     <div class="m3-dialog-overlay" id="modal-add-file">
         <div class="m3-dialog">
             <div class="m3-dialog-title">Create New File</div>
             <input type="text" class="m3-textfield" id="inp-new-file" placeholder="e.g., app.js, utils.css">
             <div class="m3-dialog-actions">
-                <button class="m3-btn m3-btn-text" onclick="closeModal('modal-add-file')">Cancel</button>
+                <button class="m3-btn m3-btn-text" id="btn-cancel-file">Cancel</button>
                 <button class="m3-btn m3-btn-filled" id="btn-confirm-add-file">Create</button>
             </div>
         </div>
     </div>
 
-    <!-- Share Modal -->
     <div class="m3-dialog-overlay" id="modal-share">
         <div class="m3-dialog">
             <div class="m3-dialog-title">Share Project</div>
             <p style="margin-bottom:16px; color:var(--md-sys-color-on-surface-variant); font-size:14px;">Anyone with these links can view the running project.</p>
             <label style="font-size:12px; color:var(--md-sys-color-on-surface-variant); margin-bottom:4px; display:block;">PUBLIC LINK</label>
-            <div class="share-link-box"><input type="text" id="link-public" readonly><button class="m3-btn m3-btn-tonal" onclick="copyLink('link-public')">Copy</button></div>
+            <div class="share-link-box"><input type="text" id="link-public" readonly><button class="m3-btn m3-btn-tonal" id="copy-pub">Copy</button></div>
             <label style="font-size:12px; color:var(--md-sys-color-on-surface-variant); margin-bottom:4px; display:block;">PRIVATE LINK</label>
-            <div class="share-link-box"><input type="text" id="link-private" readonly><button class="m3-btn m3-btn-tonal" onclick="copyLink('link-private')">Copy</button></div>
-            <div class="m3-dialog-actions">
-                <button class="m3-btn m3-btn-text" onclick="closeModal('modal-share')">Close</button>
-            </div>
+            <div class="share-link-box"><input type="text" id="link-private" readonly><button class="m3-btn m3-btn-tonal" id="copy-pvt">Copy</button></div>
+            <div class="m3-dialog-actions"><button class="m3-btn m3-btn-text" id="btn-close-share">Close</button></div>
         </div>
     </div>
 
-    <!-- Settings Modal -->
     <div class="m3-dialog-overlay" id="modal-settings">
         <div class="m3-dialog">
             <div class="m3-dialog-title">Settings</div>
@@ -416,7 +232,7 @@
                 </div>
             </div>
             <div class="m3-dialog-actions">
-                <button class="m3-btn m3-btn-text" onclick="closeModal('modal-settings')">Cancel</button>
+                <button class="m3-btn m3-btn-text" id="btn-cancel-settings">Cancel</button>
                 <button class="m3-btn m3-btn-filled" id="btn-save-settings">Apply</button>
             </div>
         </div>
@@ -443,14 +259,13 @@
         const db = getDatabase(app);
         const BASE_URL = "https://bw00111.github.io/mimic";
 
-        // State
         let currentProjectId = null;
         let projectData = null;
         let currentFileName = "index.html";
         let editor = null;
         let saveTimeout = null;
 
-        // --- UTILITY FUNCTIONS ---
+        // Utilities
         function showView(viewId) {
             document.querySelectorAll('[id^="view-"]').forEach(el => el.style.display = 'none');
             document.getElementById(viewId).style.display = viewId === 'view-editor' ? 'flex' : 'block';
@@ -463,11 +278,12 @@
             setTimeout(() => sb.classList.remove('show'), 3000);
         }
 
-        window.closeModal = (id) => document.getElementById(id).classList.remove('active');
-        window.copyLink = (id) => {
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        
+        function copyLink(id) {
             navigator.clipboard.writeText(document.getElementById(id).value);
             showSnackbar("Link copied!");
-        };
+        }
 
         function getModeFromFilename(name) {
             if (name.endsWith('.html') || name.endsWith('.htm')) return 'htmlmixed';
@@ -477,7 +293,7 @@
             return 'text/plain';
         }
 
-        // --- PUBLIC VIEW LOGIC (Fixes 404) ---
+        // --- PUBLIC VIEW LOGIC ---
         async function handlePublicRoute() {
             const path = window.location.pathname;
             let isPublic = path.includes('/pub/');
@@ -485,7 +301,6 @@
             
             if (!isPublic && !isPrivate) return false;
 
-            // Extract ID: remove trailing slash if exists, then get last part
             const parts = path.replace(/\/$/, '').split('/');
             const projectId = parts[parts.length - 1];
 
@@ -495,23 +310,19 @@
                     const data = snap.val();
                     document.title = data.name || "Mimic Project";
                     
-                    // Build combined HTML to inject into iframe
-                    let htmlContent = data.files['index.html'] || '<h1>No index.html found</h1>';
+                    // Find index.html
+                    const htmlObj = data.files.find(f => f.name === 'index.html');
+                    let htmlContent = htmlObj ? htmlObj.content : '<h1>No index.html found</h1>';
                     
-                    // Inject other CSS files into head if they aren't linked
-                    Object.keys(data.files).forEach(fName => {
-                        if (fName.endsWith('.css') && !htmlContent.includes(fName)) {
-                            htmlContent = htmlContent.replace('</head>', `<style>\n${data.files[fName]}\n</style>\n</head>`);
+                    // Inject all CSS and JS files into the iframe automatically
+                    data.files.forEach(file => {
+                        if (file.name.endsWith('.css') && !htmlContent.includes(file.name)) {
+                            htmlContent = htmlContent.replace('</head>', `<style>\n${file.content}\n</style>\n</head>`);
                         }
-                        if (fName.endsWith('.js') && fName !== 'script.js' && !htmlContent.includes(fName)) {
-                            htmlContent = htmlContent.replace('</body>', `<script>\n${data.files[fName]}\n<\/script>\n</body>`);
+                        if (file.name.endsWith('.js') && !htmlContent.includes(file.name)) {
+                            htmlContent = htmlContent.replace('</body>', `<script>\n${file.content}\n<\/script>\n</body>`);
                         }
                     });
-
-                    // Inject script.js specifically if not linked (common default)
-                    if(data.files['script.js'] && !htmlContent.includes('script.js')) {
-                        htmlContent = htmlContent.replace('</body>', `<script>\n${data.files['script.js']}\n<\/script>\n</body>`);
-                    }
 
                     document.getElementById('loading').style.display = 'none';
                     showView('view-render');
@@ -552,14 +363,15 @@
 
         async function createProject() {
             const id = Date.now().toString();
+            // FILES ARE NOW AN ARRAY OF OBJECTS TO AVOID FIREBASE DOT (.) KEY ERRORS
             const newProj = {
                 name: "Untitled Project",
                 lastModified: Date.now(),
-                files: {
-                    "index.html": "<!DOCTYPE html>\n<html>\n<head>\n  <title>New Project</title>\n  <link rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>\n  <h1>Hello World</h1>\n  <script src=\"script.js\"><\/script>\n</body>\n</html>",
-                    "style.css": "body {\n  font-family: sans-serif;\n  padding: 20px;\n  background: #f0f0f0;\n}",
-                    "script.js": "console.log('Ready to code!');"
-                }
+                files: [
+                    { name: "index.html", content: "<!DOCTYPE html>\n<html>\n<head>\n  <title>New Project</title>\n  <link rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>\n  <h1>Hello World</h1>\n  <script src=\"script.js\"><\/script>\n</body>\n</html>" },
+                    { name: "style.css", content: "body {\n  font-family: sans-serif;\n  padding: 20px;\n  background: #f0f0f0;\n}" },
+                    { name: "script.js", content: "console.log('Ready to code!');" }
+                ]
             };
             await set(ref(db, `projects/${id}`), newProj);
             openEditor(id);
@@ -587,8 +399,10 @@
             });
             editor.on('change', () => {
                 if (!projectData) return;
-                projectData.files[currentFileName] = editor.getValue();
-                // Debounce Autosave
+                // Find correct file object and update its content
+                const fileObj = projectData.files.find(f => f.name === currentFileName);
+                if (fileObj) fileObj.content = editor.getValue();
+                
                 clearTimeout(saveTimeout);
                 saveTimeout = setTimeout(autoSaveToFirebase, 1500);
             });
@@ -596,78 +410,94 @@
 
         function renderTabs() {
             const container = document.getElementById('file-tabs');
-            container.innerHTML = ''; // clear old tabs
+            container.innerHTML = ''; 
             
-            Object.keys(projectData.files).forEach(fName => {
+            projectData.files.forEach(file => {
                 const tab = document.createElement('div');
-                tab.className = `file-tab ${fName === currentFileName ? 'active' : ''}`;
-                tab.innerHTML = `
-                    <span onclick="window.switchTab('${fName}')">${fName}</span>
-                    ${Object.keys(projectData.files).length > 1 ? `<button class="delete-file-btn" onclick="event.stopPropagation(); window.deleteFile('${fName}')">×</button>` : ''}
-                `;
+                tab.className = `file-tab ${file.name === currentFileName ? 'active' : ''}`;
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = file.name;
+                nameSpan.onclick = () => switchFile(file.name);
+                tab.appendChild(nameSpan);
+                
+                if (projectData.files.length > 1) {
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'delete-file-btn';
+                    delBtn.innerHTML = '×';
+                    delBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        deleteFile(file.name);
+                    };
+                    tab.appendChild(delBtn);
+                }
                 container.appendChild(tab);
             });
 
-            // Re-append the add file button at the end
             const addBtn = document.createElement('button');
             addBtn.className = 'm3-icon-btn';
-            addBtn.id = 'btn-add-file';
             addBtn.title = 'Add File';
             addBtn.innerHTML = '<span class="material-icons-round">note_add</span>';
             addBtn.onclick = () => document.getElementById('modal-add-file').classList.add('active');
             container.appendChild(addBtn);
         }
 
-        window.switchTab = (fName) => switchFile(fName);
-
         function switchFile(fName) {
             currentFileName = fName;
-            editor.setValue(projectData.files[fName] || "");
+            const fileObj = projectData.files.find(f => f.name === fName);
+            editor.setValue(fileObj ? fileObj.content : "");
             editor.setOption('mode', getModeFromFilename(fName));
             editor.clearHistory();
-            renderTabs(); // update active state
+            renderTabs(); 
             setTimeout(() => editor.refresh(), 10);
         }
 
-        window.deleteFile = async (fName) => {
-            if (Object.keys(projectData.files).length <= 1) return showSnackbar("Must have at least one file");
-            if (!confirm(`Delete ${fName}?`)) return; // Simple confirmation for destructive action
+        async function deleteFile(fName) {
+            if (projectData.files.length <= 1) return showSnackbar("Must have at least one file");
+            if (!confirm(`Delete ${fName}?`)) return; 
             
-            delete projectData.files[fName];
-            const newFirstFile = Object.keys(projectData.files)[0];
+            projectData.files = projectData.files.filter(f => f.name !== fName);
+            const newFirstFile = projectData.files[0].name;
             
-            await update(ref(db, `projects/${currentProjectId}/files`), projectData.files);
+            // Use SET instead of UPDATE to prevent Firebase from leaving null array holes
+            await set(ref(db, `projects/${currentProjectId}/files`), projectData.files);
             switchFile(newFirstFile);
             showSnackbar(`Deleted ${fName}`);
-        };
+        }
 
-        window.addNewFile = async () => {
+        async function addNewFile() {
             const inp = document.getElementById('inp-new-file');
             let fName = inp.value.trim();
             if (!fName) return;
             if (!fName.includes('.')) return showSnackbar("Please include file extension (e.g. .js)");
-            if (projectData.files[fName]) return showSnackbar("File already exists");
+            if (projectData.files.find(f => f.name === fName)) return showSnackbar("File already exists");
 
-            projectData.files[fName] = "";
-            await update(ref(db, `projects/${currentProjectId}/files`), projectData.files);
+            projectData.files.push({ name: fName, content: "" });
+            
+            // Use SET to avoid array null errors in Firebase
+            await set(ref(db, `projects/${currentProjectId}/files`), projectData.files);
             
             closeModal('modal-add-file');
             inp.value = '';
             switchFile(fName);
             showSnackbar(`Created ${fName}`);
-        };
+        }
 
         async function autoSaveToFirebase() {
             if (!currentProjectId) return;
             projectData.name = document.getElementById('inp-project-name').value;
             projectData.lastModified = Date.now();
-            await update(ref(db, `projects/${currentProjectId}`), projectData);
+            await update(ref(db, `projects/${currentProjectId}`), {
+                name: projectData.name,
+                lastModified: projectData.lastModified,
+                files: projectData.files
+            });
         }
 
         function downloadZip() {
             if (!projectData) return;
             const zip = new JSZip();
-            Object.entries(projectData.files).forEach(([name, content]) => zip.file(name, content));
+            projectData.files.forEach(file => zip.file(file.name, file.content));
             zip.generateAsync({ type: "blob" }).then(blob => {
                 saveAs(blob, `${projectData.name.replace(/\s+/g, '_')}.zip`);
             });
@@ -675,7 +505,7 @@
 
         function runProject() {
             if (!currentProjectId) return;
-            autoSaveToFirebase(); // Force save before running
+            autoSaveToFirebase(); 
             window.open(`${BASE_URL}/pub/${currentProjectId}`, '_blank');
         }
 
@@ -698,31 +528,32 @@
             showSnackbar("Settings applied");
         }
 
-        // Toggle checkbox UI hack
-        document.getElementById('toggle-wrap').addEventListener('click', function() {
-            const cb = document.getElementById('set-wordwrap');
-            cb.checked = !cb.checked;
-            this.innerHTML = cb.checked ? 'check_box' : 'check_box_outline_blank';
-        });
-
-        // --- INIT & EVENT LISTENERS ---
+        // --- INIT & EVENTS ---
         async function init() {
-            // 1. Handle Public Routing First
             if (await handlePublicRoute()) return;
 
-            // 2. Initialize IDE
             document.getElementById('btn-new-project').onclick = createProject;
             document.getElementById('btn-back').onclick = () => { currentProjectId = null; projectData = null; loadProjects(); };
             document.getElementById('btn-save-zip').onclick = downloadZip;
             document.getElementById('btn-run').onclick = runProject;
             document.getElementById('btn-share').onclick = openShareModal;
             document.getElementById('btn-settings').onclick = () => document.getElementById('modal-settings').classList.add('active');
+            
             document.getElementById('btn-save-settings').onclick = applySettings;
-            document.getElementById('btn-confirm-add-file').onclick = window.addNewFile;
+            document.getElementById('btn-cancel-settings').onclick = () => closeModal('modal-settings');
+            
+            document.getElementById('btn-confirm-add-file').onclick = addNewFile;
+            document.getElementById('btn-cancel-file').onclick = () => closeModal('modal-add-file');
+            document.getElementById('inp-new-file').addEventListener('keypress', (e) => { if (e.key === 'Enter') addNewFile(); });
+            
+            document.getElementById('copy-pub').onclick = () => copyLink('link-public');
+            document.getElementById('copy-pvt').onclick = () => copyLink('link-private');
+            document.getElementById('btn-close-share').onclick = () => closeModal('modal-share');
 
-            // Allow enter key in add file modal
-            document.getElementById('inp-new-file').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') window.addNewFile();
+            document.getElementById('toggle-wrap').addEventListener('click', function() {
+                const cb = document.getElementById('set-wordwrap');
+                cb.checked = !cb.checked;
+                this.innerHTML = cb.checked ? 'check_box' : 'check_box_outline_blank';
             });
 
             loadProjects();
