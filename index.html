@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mimic - Web IDE</title>
+    <title>Mimic</title>
+    
     <!-- Firebase -->
     <script type="module" src="https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js"></script>
+    
     <!-- CodeMirror -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
@@ -14,556 +16,418 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
-    <!-- JSZip and FileSaver -->
+    
+    <!-- JSZip -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
     <style>
+        /* Material 3 Light Theme Variables */
         :root {
-            --bg-color: #000;
-            --text-color: #fff;
-            --border-color: #333;
-            --btn-bg: #111;
-            --btn-hover: #222;
+            --md-sys-color-primary: #6750A4;
+            --md-sys-color-on-primary: #FFFFFF;
+            --md-sys-color-primary-container: #EADDFF;
+            --md-sys-color-on-primary-container: #21005D;
+            --md-sys-color-secondary: #625B71;
+            --md-sys-color-surface: #FFFBFE;
+            --md-sys-color-surface-dim: #DED8E1;
+            --md-sys-color-surface-bright: #FFFBFE;
+            --md-sys-color-surface-container-lowest: #FFFFFF;
+            --md-sys-color-surface-container-low: #F7F2FA;
+            --md-sys-color-surface-container: #F3EDF7;
+            --md-sys-color-surface-container-high: #ECE6F0;
+            --md-sys-color-surface-container-highest: #E6E0E9;
+            --md-sys-color-on-surface: #1C1B1F;
+            --md-sys-color-on-surface-variant: #49454F;
+            --md-sys-color-outline: #79747E;
+            --md-sys-color-outline-variant: #CAC4D0;
+            --md-sys-color-error: #B3261E;
+            --md-ref-typeface: 'Roboto', sans-serif;
+            --md-sys-elevation-1: 0 1px 2px rgba(0,0,0,0.3), 0 1px 3px 1px rgba(0,0,0,0.15);
+            --md-sys-elevation-2: 0 1px 2px rgba(0,0,0,0.3), 0 2px 6px 2px rgba(0,0,0,0.15);
         }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            min-height: 100vh;
-        }
-        
-        .app-container {
-            display: flex;
-            flex-direction: column;
+            font-family: var(--md-ref-typeface);
+            background-color: var(--md-sys-color-surface);
+            color: var(--md-sys-color-on-surface);
             height: 100vh;
-        }
-        
-        /* Top Bar */
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 20px;
-            background-color: var(--bg-color);
-            border-bottom: 1px solid var(--border-color);
-        }
-        
-        .project-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .project-name {
-            background: transparent;
-            border: none;
-            color: var(--text-color);
-            font-size: 16px;
-            font-weight: bold;
-            padding: 5px;
-            width: 200px;
-        }
-        
-        .project-name:focus {
-            outline: none;
-            border-bottom: 1px solid var(--text-color);
-        }
-        
-        .settings-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-color);
-            cursor: pointer;
-            font-size: 18px;
-            padding: 5px;
-        }
-        
-        .settings-btn:hover {
-            color: #aaa;
-        }
-        
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .action-btn {
-            background-color: var(--btn-bg);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            padding: 8px 16px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.2s;
-        }
-        
-        .action-btn:hover {
-            background-color: var(--btn-hover);
-        }
-        
-        /* Editor Area */
-        .editor-container {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .file-tabs {
-            display: flex;
-            background-color: #111;
-            border-bottom: 1px solid var(--border-color);
-        }
-        
-        .file-tab {
-            padding: 10px 20px;
-            cursor: pointer;
-            border-right: 1px solid var(--border-color);
-            font-size: 14px;
-        }
-        
-        .file-tab.active {
-            background-color: var(--bg-color);
-            border-bottom: 2px solid var(--text-color);
-        }
-        
-        .file-tab:hover {
-            background-color: #222;
-        }
-        
-        .editor-wrapper {
-            flex-grow: 1;
             overflow: hidden;
         }
-        
-        .CodeMirror {
-            height: 100%;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-        }
-        
-        .CodeMirror-gutters {
-            background-color: #111;
-            border-right: 1px solid var(--border-color);
-        }
-        
-        .CodeMirror-linenumber {
-            color: #666;
-        }
-        
-        /* Project List */
-        .project-list-container {
-            display: flex;
-            flex-direction: column;
+
+        /* --- MATERIAL 3 COMPONENTS --- */
+        .m3-btn {
+            display: inline-flex;
             align-items: center;
-            padding: 40px;
-            height: 100vh;
-        }
-        
-        .project-list-title {
-            font-size: 32px;
-            margin-bottom: 40px;
-        }
-        
-        .project-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            width: 100%;
-            max-width: 1200px;
-            margin-bottom: 40px;
-        }
-        
-        .project-card {
-            background-color: #111;
-            border: 1px solid var(--border-color);
-            border-radius: 5px;
-            padding: 20px;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
-        .project-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.1);
-        }
-        
-        .project-card-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        
-        .project-card-date {
+            justify-content: center;
+            gap: 8px;
+            height: 40px;
+            padding: 0 24px;
+            border-radius: 20px;
+            border: none;
+            font-family: var(--md-ref-typeface);
             font-size: 14px;
-            color: #666;
-        }
-        
-        .add-project-btn {
-            background-color: #111;
-            border: 2px dashed var(--border-color);
-            color: var(--text-color);
-            padding: 20px;
-            border-radius: 5px;
+            font-weight: 500;
             cursor: pointer;
-            font-size: 16px;
-            width: 100%;
-            max-width: 1200px;
-            height: 100px;
+            transition: box-shadow 200ms, background-color 200ms;
+        }
+        .m3-btn-filled {
+            background-color: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+            box-shadow: var(--md-sys-elevation-1);
+        }
+        .m3-btn-filled:hover { box-shadow: var(--md-sys-elevation-2); }
+        
+        .m3-btn-outlined {
+            background-color: transparent;
+            color: var(--md-sys-color-primary);
+            border: 1px solid var(--md-sys-color-outline);
+        }
+        .m3-btn-outlined:hover { background-color: rgba(103, 80, 164, 0.08); }
+
+        .m3-btn-tonal {
+            background-color: var(--md-sys-color-secondary-container);
+            color: var(--md-sys-color-on-secondary-container);
+        }
+        .m3-btn-tonal:hover { box-shadow: var(--md-sys-elevation-1); }
+
+        .m3-btn-text {
+            background-color: transparent;
+            color: var(--md-sys-color-primary);
+            padding: 0 12px;
+        }
+        .m3-btn-text:hover { background-color: rgba(103, 80, 164, 0.08); }
+
+        .m3-icon-btn {
+            width: 40px; height: 40px;
+            border-radius: 20px;
+            border: none;
+            background: transparent;
+            color: var(--md-sys-color-on-surface-variant);
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background-color 0.2s;
         }
-        
-        .add-project-btn:hover {
-            background-color: #222;
+        .m3-icon-btn:hover { background-color: rgba(28, 27, 31, 0.08); }
+
+        .m3-card-elevated {
+            background-color: var(--md-sys-color-surface-container-low);
+            border-radius: 12px;
+            box-shadow: var(--md-sys-elevation-1);
+            padding: 16px;
+            cursor: pointer;
+            transition: box-shadow 200ms, transform 150ms;
         }
-        
-        /* Settings Modal */
-        .modal-overlay {
+        .m3-card-elevated:hover {
+            box-shadow: var(--md-sys-elevation-2);
+            transform: translateY(-2px);
+        }
+
+        .m3-dialog-overlay {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.7);
+            inset: 0;
+            background-color: rgba(0,0,0,0.4);
             z-index: 1000;
             justify-content: center;
             align-items: center;
         }
+        .m3-dialog-overlay.active { display: flex; }
         
-        .modal-overlay.active {
-            display: flex;
+        .m3-dialog {
+            background-color: var(--md-sys-color-surface-container-high);
+            border-radius: 28px;
+            padding: 24px;
+            min-width: 320px;
+            max-width: 560px;
+            box-shadow: var(--md-sys-elevation-3);
         }
-        
-        .modal {
-            background-color: #111;
-            border: 1px solid var(--border-color);
-            border-radius: 5px;
-            padding: 30px;
-            width: 500px;
-            max-width: 90%;
+        .m3-dialog-title { font-size: 24px; font-weight: 500; margin-bottom: 16px; color: var(--md-sys-color-on-surface); }
+        .m3-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+
+        .m3-textfield {
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid var(--md-sys-color-outline);
+            background: transparent;
+            color: var(--md-sys-color-on-surface);
+            font-family: var(--md-ref-typeface);
+            font-size: 16px;
+            outline: none;
+            transition: border-color 200ms;
         }
-        
-        .modal-title {
-            font-size: 24px;
-            margin-bottom: 20px;
+        .m3-textfield:focus { border-color: var(--md-sys-color-primary); }
+
+        /* --- LAYOUT --- */
+        .loading-screen {
+            position: fixed; inset: 0;
+            background: var(--md-sys-color-surface);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999;
         }
-        
-        .modal-content {
-            margin-bottom: 20px;
+        .loading-spinner {
+            width: 48px; height: 48px;
+            border: 4px solid var(--md-sys-color-surface-container-highest);
+            border-top-color: var(--md-sys-color-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
-        
-        .setting-item {
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* --- PROJECT LIST VIEW --- */
+        #view-projects {
+            height: 100vh;
+            overflow-y: auto;
+            padding: 32px;
+            background-color: var(--md-sys-color-surface-dim);
+        }
+        .projects-header {
+            max-width: 1200px;
+            margin: 0 auto 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
         }
-        
-        .setting-label {
-            font-size: 16px;
+        .projects-title { font-size: 28px; font-weight: 700; color: var(--md-sys-color-on-surface); }
+        .projects-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
         }
+
+        /* --- EDITOR VIEW --- */
+        #view-editor { display: none; height: 100vh; flex-direction: column; background: var(--md-sys-color-surface); }
         
-        .setting-input {
-            background-color: var(--bg-color);
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            padding: 8px;
-            width: 200px;
-        }
-        
-        .setting-toggle {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 34px;
-        }
-        
-        .setting-toggle input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #333;
-            transition: .4s;
-            border-radius: 34px;
-        }
-        
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 26px;
-            width: 26px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        
-        input:checked + .toggle-slider {
-            background-color: #2196F3;
-        }
-        
-        input:checked + .toggle-slider:before {
-            transform: translateX(26px);
-        }
-        
-        .modal-actions {
+        .editor-top-bar {
             display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-        
-        .modal-btn {
-            background-color: var(--btn-bg);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            padding: 8px 16px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.2s;
-        }
-        
-        .modal-btn:hover {
-            background-color: var(--btn-hover);
-        }
-        
-        .modal-btn.primary {
-            background-color: #333;
-        }
-        
-        /* Share Modal */
-        .share-links {
-            margin-bottom: 20px;
-        }
-        
-        .share-link-item {
-            margin-bottom: 15px;
-        }
-        
-        .share-link-label {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 5px;
-        }
-        
-        .share-link-container {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .share-link-input {
-            flex-grow: 1;
-            background-color: var(--bg-color);
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            padding: 8px;
-            font-size: 14px;
-        }
-        
-        .copy-btn {
-            background-color: var(--btn-bg);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            padding: 8px 12px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.2s;
-        }
-        
-        .copy-btn:hover {
-            background-color: var(--btn-hover);
-        }
-        
-        /* Notification */
-        .notification {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: #333;
-            color: var(--text-color);
-            padding: 15px 20px;
-            border-radius: 5px;
-            z-index: 1000;
-            display: none;
-            font-size: 14px;
-        }
-        
-        .notification.active {
-            display: block;
-            animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes fadeOut {
-            from { opacity: 1; transform: translateY(0); }
-            to { opacity: 0; transform: translateY(20px); }
-        }
-        
-        /* Loading */
-        .loading {
-            display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            height: 100vh;
+            padding: 8px 16px;
+            background-color: var(--md-sys-color-surface);
+            border-bottom: 1px solid var(--md-sys-color-outline-variant);
         }
+        .project-name-input {
+            border: none;
+            background: transparent;
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--md-sys-color-on-surface);
+            width: 250px;
+            padding: 8px;
+            border-radius: 8px;
+        }
+        .project-name-input:focus { background-color: var(--md-sys-color-surface-container-high); outline: none; }
         
-        .loading-spinner {
-            border: 4px solid #333;
-            border-top: 4px solid var(--text-color);
+        .file-tabs-container {
+            display: flex;
+            align-items: center;
+            background-color: var(--md-sys-color-surface-container);
+            padding: 0 8px;
+            overflow-x: auto;
+        }
+        .file-tab {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            font-size: 14px;
+            color: var(--md-sys-color-on-surface-variant);
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            white-space: nowrap;
+            position: relative;
+        }
+        .file-tab.active {
+            color: var(--md-sys-color-primary);
+            border-bottom-color: var(--md-sys-color-primary);
+            background-color: var(--md-sys-color-surface-container-lowest);
+            border-radius: 8px 8px 0 0;
+        }
+        .file-tab .delete-file-btn {
+            margin-left: 8px;
+            width: 18px; height: 18px;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Public View */
-        .public-view {
+            border: none;
+            background: transparent;
+            color: var(--md-sys-color-on-surface-variant);
+            font-size: 16px;
+            cursor: pointer;
             display: none;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
         }
+        .file-tab:hover .delete-file-btn { display: flex; }
+        .file-tab .delete-file-btn:hover { background-color: rgba(179, 38, 30, 0.1); color: var(--md-sys-color-error); }
+
+        .editor-area { flex-grow: 1; overflow: hidden; }
+
+        /* CodeMirror Material 3 Overrides */
+        .CodeMirror {
+            height: 100%;
+            background-color: var(--md-sys-color-surface-container-lowest);
+            color: var(--md-sys-color-on-surface);
+            font-family: 'Roboto Mono', monospace;
+        }
+        .CodeMirror-gutters {
+            background-color: var(--md-sys-color-surface-container-low);
+            border-right: 1px solid var(--md-sys-color-outline-variant);
+        }
+        .CodeMirror-linenumber { color: var(--md-sys-color-outline); }
+        .CodeMirror-cursor { border-left: 2px solid var(--md-sys-color-primary); }
+        .CodeMirror-selected { background: rgba(103, 80, 164, 0.2) !important; }
+        .cm-s-default .cm-keyword { color: #6750A4; font-weight: 500; }
+        .cm-s-default .cm-def { color: #0061A4; }
+        .cm-s-default .cm-variable { color: #1C1B1F; }
+        .cm-s-default .cm-string { color: #386A20; }
+        .cm-s-default .cm-tag { color: #0061A4; }
+        .cm-s-default .cm-attribute { color: #6750A4; }
+
+        /* Public Render View */
+        #view-render { display: none; position: fixed; inset: 0; background: white; z-index: -1; }
+        #view-render iframe { width: 100%; height: 100%; border: none; }
+
+        /* Notification SnackBar */
+        .snackbar {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background-color: var(--md-sys-color-on-surface);
+            color: var(--md-sys-color-surface);
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            z-index: 2000;
+            transition: transform 300ms cubic-bezier(0.2, 0, 0, 1);
+            box-shadow: var(--md-sys-elevation-3);
+        }
+        .snackbar.show { transform: translateX(-50%) translateY(0); }
+
+        .share-link-box {
+            display: flex; gap: 8px; margin-bottom: 12px; align-items: center;
+        }
+        .share-link-box input {
+            flex: 1; padding: 10px; border: 1px solid var(--md-sys-color-outline); border-radius: 8px;
+            background: var(--md-sys-color-surface-container-lowest); color: var(--md-sys-color-on-surface); font-size: 14px;
+        }
+
     </style>
 </head>
 <body>
-    <div class="loading" id="loading">
-        <div class="loading-spinner"></div>
-    </div>
-    
-    <div class="app-container" id="app-container" style="display: none;">
-        <!-- Project List View -->
-        <div class="project-list-container" id="project-list-view">
-            <h1 class="project-list-title">Mimic</h1>
-            <div class="project-grid" id="project-grid">
-                <!-- Projects will be loaded here -->
-            </div>
-            <button class="add-project-btn" id="add-project-btn">+ New Project</button>
+
+    <div class="loading-screen" id="loading"><div class="loading-spinner"></div></div>
+
+    <!-- VIEW 1: Project List -->
+    <div id="view-projects" style="display:none;">
+        <div class="projects-header">
+            <h1 class="projects-title">Mimic</h1>
+            <button class="m3-btn m3-btn-filled" id="btn-new-project">
+                <span class="material-icons-round" style="font-size:18px;">add</span> New Project
+            </button>
         </div>
-        
-        <!-- Editor View -->
-        <div class="editor-container" id="editor-view" style="display: none;">
-            <div class="top-bar">
-                <div class="project-info">
-                    <input type="text" class="project-name" id="project-name" placeholder="Project Name">
-                    <button class="settings-btn" id="settings-btn">⚙️</button>
-                </div>
-                <div class="action-buttons">
-                    <button class="action-btn" id="save-btn">💾 Save</button>
-                    <button class="action-btn" id="run-btn">▶️ Run</button>
-                    <button class="action-btn" id="share-btn">🔗 Share</button>
-                </div>
+        <div class="projects-grid" id="projects-grid"></div>
+    </div>
+
+    <!-- VIEW 2: Editor -->
+    <div id="view-editor">
+        <div class="editor-top-bar">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <button class="m3-icon-btn" id="btn-back"><span class="material-icons-round">arrow_back</span></button>
+                <input type="text" class="project-name-input" id="inp-project-name" placeholder="Project Name">
+                <button class="m3-icon-btn" id="btn-settings"><span class="material-icons-round">tune</span></button>
             </div>
-            <div class="file-tabs">
-                <div class="file-tab active" data-file="html">index.html</div>
-                <div class="file-tab" data-file="css">style.css</div>
-                <div class="file-tab" data-file="js">script.js</div>
-            </div>
-            <div class="editor-wrapper">
-                <textarea id="code-editor"></textarea>
+            <div style="display:flex; gap:8px;">
+                <button class="m3-btn m3-btn-tonal" id="btn-save-zip">
+                    <span class="material-icons-round" style="font-size:18px;">download</span> Save
+                </button>
+                <button class="m3-btn m3-btn-filled" id="btn-run">
+                    <span class="material-icons-round" style="font-size:18px;">play_arrow</span> Run
+                </button>
+                <button class="m3-btn m3-btn-outlined" id="btn-share">
+                    <span class="material-icons-round" style="font-size:18px;">share</span> Share
+                </button>
             </div>
         </div>
+        <div class="file-tabs-container" id="file-tabs">
+            <!-- Tabs injected here -->
+            <button class="m3-icon-btn" id="btn-add-file" title="Add File"><span class="material-icons-round">note_add</span></button>
+        </div>
+        <div class="editor-area">
+            <textarea id="cm-textarea"></textarea>
+        </div>
     </div>
-    
-    <!-- Settings Modal -->
-    <div class="modal-overlay" id="settings-modal">
-        <div class="modal">
-            <h2 class="modal-title">Settings</h2>
-            <div class="modal-content">
-                <div class="setting-item">
-                    <span class="setting-label">Autosave</span>
-                    <label class="setting-toggle">
-                        <input type="checkbox" id="autosave-toggle" checked>
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-                <div class="setting-item">
-                    <span class="setting-label">Autosave Interval (seconds)</span>
-                    <input type="number" class="setting-input" id="autosave-interval" value="5" min="1">
-                </div>
-                <div class="setting-item">
-                    <span class="setting-label">Tab Size</span>
-                    <input type="number" class="setting-input" id="tab-size" value="2" min="1" max="8">
-                </div>
-                <div class="setting-item">
-                    <span class="setting-label">Word Wrap</span>
-                    <label class="setting-toggle">
-                        <input type="checkbox" id="word-wrap-toggle">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button class="modal-btn" id="cancel-settings-btn">Cancel</button>
-                <button class="modal-btn primary" id="save-settings-btn">Save</button>
+
+    <!-- VIEW 3: Public Renderer (Fallback 404 view) -->
+    <div id="view-render"><iframe id="render-iframe"></iframe></div>
+
+    <!-- MODALS -->
+    <!-- Add File Modal -->
+    <div class="m3-dialog-overlay" id="modal-add-file">
+        <div class="m3-dialog">
+            <div class="m3-dialog-title">Create New File</div>
+            <input type="text" class="m3-textfield" id="inp-new-file" placeholder="e.g., app.js, utils.css">
+            <div class="m3-dialog-actions">
+                <button class="m3-btn m3-btn-text" onclick="closeModal('modal-add-file')">Cancel</button>
+                <button class="m3-btn m3-btn-filled" id="btn-confirm-add-file">Create</button>
             </div>
         </div>
     </div>
-    
+
     <!-- Share Modal -->
-    <div class="modal-overlay" id="share-modal">
-        <div class="modal">
-            <h2 class="modal-title">Share Project</h2>
-            <div class="modal-content">
-                <div class="share-links">
-                    <div class="share-link-item">
-                        <div class="share-link-label">Private Link (only you can view)</div>
-                        <div class="share-link-container">
-                            <input type="text" class="share-link-input" id="private-link" readonly>
-                            <button class="copy-btn" data-copy="private-link">Copy</button>
-                        </div>
-                    </div>
-                    <div class="share-link-item">
-                        <div class="share-link-label">Public Link (anyone can view)</div>
-                        <div class="share-link-container">
-                            <input type="text" class="share-link-input" id="public-link" readonly>
-                            <button class="copy-btn" data-copy="public-link">Copy</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button class="modal-btn" id="close-share-btn">Close</button>
+    <div class="m3-dialog-overlay" id="modal-share">
+        <div class="m3-dialog">
+            <div class="m3-dialog-title">Share Project</div>
+            <p style="margin-bottom:16px; color:var(--md-sys-color-on-surface-variant); font-size:14px;">Anyone with these links can view the running project.</p>
+            <label style="font-size:12px; color:var(--md-sys-color-on-surface-variant); margin-bottom:4px; display:block;">PUBLIC LINK</label>
+            <div class="share-link-box"><input type="text" id="link-public" readonly><button class="m3-btn m3-btn-tonal" onclick="copyLink('link-public')">Copy</button></div>
+            <label style="font-size:12px; color:var(--md-sys-color-on-surface-variant); margin-bottom:4px; display:block;">PRIVATE LINK</label>
+            <div class="share-link-box"><input type="text" id="link-private" readonly><button class="m3-btn m3-btn-tonal" onclick="copyLink('link-private')">Copy</button></div>
+            <div class="m3-dialog-actions">
+                <button class="m3-btn m3-btn-text" onclick="closeModal('modal-share')">Close</button>
             </div>
         </div>
     </div>
-    
-    <!-- Notification -->
-    <div class="notification" id="notification"></div>
-    
-    <!-- Public View (for running projects) -->
-    <div class="public-view" id="public-view"></div>
+
+    <!-- Settings Modal -->
+    <div class="m3-dialog-overlay" id="modal-settings">
+        <div class="m3-dialog">
+            <div class="m3-dialog-title">Settings</div>
+            <div style="display:flex; flex-direction:column; gap:16px;">
+                <div>
+                    <label style="font-size:14px; color:var(--md-sys-color-on-surface-variant);">Tab Size</label>
+                    <input type="number" class="m3-textfield" id="set-tabsize" value="2" min="1" max="8" style="margin-top:8px;">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="font-size:14px; color:var(--md-sys-color-on-surface-variant);">Word Wrap</label>
+                    <label class="material-icons-round" style="cursor:pointer; color:var(--md-sys-color-primary); font-size:32px;" id="toggle-wrap">
+                        <input type="checkbox" style="display:none;" id="set-wordwrap">
+                        check_box_outline_blank
+                    </label>
+                </div>
+            </div>
+            <div class="m3-dialog-actions">
+                <button class="m3-btn m3-btn-text" onclick="closeModal('modal-settings')">Cancel</button>
+                <button class="m3-btn m3-btn-filled" id="btn-save-settings">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="snackbar" id="snackbar"></div>
 
     <script type="module">
-        // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
-        import { getDatabase, ref, set, get, update, remove } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
-        
-        // Firebase configuration
+        import { getDatabase, ref, get, set, update } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
+
         const firebaseConfig = {
             apiKey: "AIzaSyBk_9ZoyexrPZON-JowtMeNgWCzpfsQyeM",
             authDomain: "mimic-799e5.firebaseapp.com",
@@ -574,508 +438,296 @@
             appId: "1:914081698620:web:2bb171c9afb66efa66c439",
             measurementId: "G-5TP997CQC8"
         };
-        
-        // Initialize Firebase
+
         const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
-        
-        // App state
+        const db = getDatabase(app);
+        const BASE_URL = "https://bw00111.github.io/mimic";
+
+        // State
         let currentProjectId = null;
-        let currentFile = 'html';
-        let editors = {};
-        let autosaveInterval = null;
-        let settings = {
-            autosave: true,
-            autosaveInterval: 5,
-            tabSize: 2,
-            wordWrap: false
+        let projectData = null;
+        let currentFileName = "index.html";
+        let editor = null;
+        let saveTimeout = null;
+
+        // --- UTILITY FUNCTIONS ---
+        function showView(viewId) {
+            document.querySelectorAll('[id^="view-"]').forEach(el => el.style.display = 'none');
+            document.getElementById(viewId).style.display = viewId === 'view-editor' ? 'flex' : 'block';
+        }
+
+        function showSnackbar(msg) {
+            const sb = document.getElementById('snackbar');
+            sb.textContent = msg;
+            sb.classList.add('show');
+            setTimeout(() => sb.classList.remove('show'), 3000);
+        }
+
+        window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+        window.copyLink = (id) => {
+            navigator.clipboard.writeText(document.getElementById(id).value);
+            showSnackbar("Link copied!");
         };
-        
-        // DOM elements
-        const loadingElement = document.getElementById('loading');
-        const appContainer = document.getElementById('app-container');
-        const projectListView = document.getElementById('project-list-view');
-        const projectGrid = document.getElementById('project-grid');
-        const addProjectBtn = document.getElementById('add-project-btn');
-        const editorView = document.getElementById('editor-view');
-        const projectNameInput = document.getElementById('project-name');
-        const settingsBtn = document.getElementById('settings-btn');
-        const saveBtn = document.getElementById('save-btn');
-        const runBtn = document.getElementById('run-btn');
-        const shareBtn = document.getElementById('share-btn');
-        const settingsModal = document.getElementById('settings-modal');
-        const autosaveToggle = document.getElementById('autosave-toggle');
-        const autosaveIntervalInput = document.getElementById('autosave-interval');
-        const tabSizeInput = document.getElementById('tab-size');
-        const wordWrapToggle = document.getElementById('word-wrap-toggle');
-        const cancelSettingsBtn = document.getElementById('cancel-settings-btn');
-        const saveSettingsBtn = document.getElementById('save-settings-btn');
-        const shareModal = document.getElementById('share-modal');
-        const privateLinkInput = document.getElementById('private-link');
-        const publicLinkInput = document.getElementById('public-link');
-        const closeShareBtn = document.getElementById('close-share-btn');
-        const notification = document.getElementById('notification');
-        const publicView = document.getElementById('public-view');
-        
-        // Check if we're in public view mode
-        function checkPublicView() {
+
+        function getModeFromFilename(name) {
+            if (name.endsWith('.html') || name.endsWith('.htm')) return 'htmlmixed';
+            if (name.endsWith('.css')) return 'css';
+            if (name.endsWith('.js')) return 'javascript';
+            if (name.endsWith('.json')) return 'application/json';
+            return 'text/plain';
+        }
+
+        // --- PUBLIC VIEW LOGIC (Fixes 404) ---
+        async function handlePublicRoute() {
             const path = window.location.pathname;
-            const isPublicView = path.includes('/pub/') || path.includes('/pv/');
+            let isPublic = path.includes('/pub/');
+            let isPrivate = path.includes('/pv/');
             
-            if (isPublicView) {
-                const parts = path.split('/');
-                const projectId = parts[parts.length - 1];
-                const isPrivate = path.includes('/pv/');
-                
-                loadProjectForPublicView(projectId, isPrivate);
-                return true;
-            }
-            
-            return false;
-        }
-        
-        // Load project for public view
-        async function loadProjectForPublicView(projectId, isPrivate) {
+            if (!isPublic && !isPrivate) return false;
+
+            // Extract ID: remove trailing slash if exists, then get last part
+            const parts = path.replace(/\/$/, '').split('/');
+            const projectId = parts[parts.length - 1];
+
             try {
-                const projectRef = ref(database, `projects/${projectId}`);
-                const snapshot = await get(projectRef);
-                
-                if (snapshot.exists()) {
-                    const projectData = snapshot.val();
+                const snap = await get(ref(db, `projects/${projectId}`));
+                if (snap.exists()) {
+                    const data = snap.val();
+                    document.title = data.name || "Mimic Project";
                     
-                    // Check if private project and access is allowed
-                    if (isPrivate && !projectData.isPrivate) {
-                        // Redirect to public version
-                        window.location.href = `https://bw00111.github.io/mimic/pub/${projectId}`;
-                        return;
-                    }
+                    // Build combined HTML to inject into iframe
+                    let htmlContent = data.files['index.html'] || '<h1>No index.html found</h1>';
                     
-                    // Render the project
-                    publicView.style.display = 'block';
-                    appContainer.style.display = 'none';
-                    loadingElement.style.display = 'none';
-                    
-                    // Create a complete HTML document with embedded CSS and JS
-                    const htmlContent = projectData.files.html || '';
-                    const cssContent = projectData.files.css || '';
-                    const jsContent = projectData.files.js || '';
-                    
-                    // Extract title from HTML if present
-                    const titleMatch = htmlContent.match(/<title>(.*?)<\/title>/i);
-                    const title = titleMatch ? titleMatch[1] : projectData.name || 'Mimic Project';
-                    document.title = title;
-                    
-                    // Extract favicon if present
-                    const faviconMatch = htmlContent.match(/<link[^>]*rel=["']icon["'][^>]*>/i);
-                    if (faviconMatch) {
-                        const favicon = document.createElement('link');
-                        favicon.innerHTML = faviconMatch[0];
-                        document.head.appendChild(favicon.firstChild);
-                    }
-                    
-                    // Create a complete document with CSS and JS embedded
-                    let fullHtml = htmlContent;
-                    
-                    // Add CSS if not already present
-                    if (cssContent && !htmlContent.includes(cssContent)) {
-                        fullHtml = fullHtml.replace('</head>', `<style>${cssContent}</style></head>`);
-                        if (!fullHtml.includes('</head>')) {
-                            fullHtml = `<style>${cssContent}</style>${fullHtml}`;
+                    // Inject other CSS files into head if they aren't linked
+                    Object.keys(data.files).forEach(fName => {
+                        if (fName.endsWith('.css') && !htmlContent.includes(fName)) {
+                            htmlContent = htmlContent.replace('</head>', `<style>\n${data.files[fName]}\n</style>\n</head>`);
                         }
-                    }
-                    
-                    // Add JS if not already present
-                    if (jsContent && !htmlContent.includes(jsContent)) {
-                        fullHtml = fullHtml.replace('</body>', `<script>${jsContent}<\/script></body>`);
-                        if (!fullHtml.includes('</body>')) {
-                            fullHtml = `${fullHtml}<script>${jsContent}<\/script>`;
+                        if (fName.endsWith('.js') && fName !== 'script.js' && !htmlContent.includes(fName)) {
+                            htmlContent = htmlContent.replace('</body>', `<script>\n${data.files[fName]}\n<\/script>\n</body>`);
                         }
-                    }
-                    
-                    // Use an iframe to isolate the project
-                    const iframe = document.createElement('iframe');
-                    iframe.style.width = '100%';
-                    iframe.style.height = '100vh';
-                    iframe.style.border = 'none';
-                    iframe.style.position = 'fixed';
-                    iframe.style.top = '0';
-                    iframe.style.left = '0';
-                    iframe.style.zIndex = '-1';
-                    publicView.appendChild(iframe);
-                    
-                    // Write content to iframe
-                    iframe.contentDocument.open();
-                    iframe.contentDocument.write(fullHtml);
-                    iframe.contentDocument.close();
-                } else {
-                    publicView.innerHTML = `
-                        <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; color: white; font-family: Arial, sans-serif;">
-                            <h1 style="margin-bottom: 20px;">Project Not Found</h1>
-                            <p>The project you're looking for doesn't exist or has been deleted.</p>
-                            <a href="https://bw00111.github.io/mimic/" style="margin-top: 20px; color: white; text-decoration: underline;">Go to Mimic</a>
-                        </div>
-                    `;
-                    document.title = "Project Not Found";
-                }
-            } catch (error) {
-                console.error("Error loading project for public view:", error);
-                publicView.innerHTML = `
-                    <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; color: white; font-family: Arial, sans-serif;">
-                        <h1 style="margin-bottom: 20px;">Error Loading Project</h1>
-                        <p>There was an error loading this project. Please try again later.</p>
-                        <a href="https://bw00111.github.io/mimic/" style="margin-top: 20px; color: white; text-decoration: underline;">Go to Mimic</a>
-                    </div>
-                `;
-                document.title = "Error";
-            }
-        }
-        
-        // Initialize CodeMirror editors
-        function initEditors() {
-            const commonOptions = {
-                lineNumbers: true,
-                tabSize: settings.tabSize,
-                indentUnit: settings.tabSize,
-                lineWrapping: settings.wordWrap,
-                theme: 'default'
-            };
-            
-            // Create editors for each file type
-            editors.html = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
-                ...commonOptions,
-                mode: 'htmlmixed'
-            });
-            
-            // We'll reuse the same textarea but switch modes and content
-            editors.css = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
-                ...commonOptions,
-                mode: 'css'
-            });
-            
-            editors.js = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
-                ...commonOptions,
-                mode: 'javascript'
-            });
-            
-            // Initially show only the HTML editor
-            editors.html.getWrapperElement().style.display = 'block';
-            editors.css.getWrapperElement().style.display = 'none';
-            editors.js.getWrapperElement().style.display = 'none';
-            
-            // Set up change listeners for autosave
-            Object.values(editors).forEach(editor => {
-                editor.on('change', () => {
-                    if (settings.autosave) {
-                        clearTimeout(autosaveInterval);
-                        autosaveInterval = setTimeout(saveProject, settings.autosaveInterval * 1000);
-                    }
-                });
-            });
-        }
-        
-        // Load projects from Firebase
-        async function loadProjects() {
-            try {
-                const projectsRef = ref(database, 'projects');
-                const snapshot = await get(projectsRef);
-                
-                projectGrid.innerHTML = '';
-                
-                if (snapshot.exists()) {
-                    const projects = snapshot.val();
-                    
-                    Object.entries(projects).forEach(([id, project]) => {
-                        const projectCard = document.createElement('div');
-                        projectCard.className = 'project-card';
-                        projectCard.dataset.id = id;
-                        
-                        const lastModified = project.lastModified 
-                            ? new Date(project.lastModified).toLocaleDateString() 
-                            : 'Unknown';
-                        
-                        projectCard.innerHTML = `
-                            <div class="project-card-title">${project.name || 'Untitled Project'}</div>
-                            <div class="project-card-date">Last modified: ${lastModified}</div>
-                        `;
-                        
-                        projectCard.addEventListener('click', () => openProject(id));
-                        projectGrid.appendChild(projectCard);
                     });
-                } else {
-                    projectGrid.innerHTML = '<p>No projects yet. Create a new one to get started.</p>';
+
+                    // Inject script.js specifically if not linked (common default)
+                    if(data.files['script.js'] && !htmlContent.includes('script.js')) {
+                        htmlContent = htmlContent.replace('</body>', `<script>\n${data.files['script.js']}\n<\/script>\n</body>`);
+                    }
+
+                    document.getElementById('loading').style.display = 'none';
+                    showView('view-render');
+                    document.getElementById('render-iframe').srcdoc = htmlContent;
+                    return true;
                 }
-            } catch (error) {
-                console.error("Error loading projects:", error);
-                projectGrid.innerHTML = '<p>Error loading projects. Please try again later.</p>';
-            }
+            } catch(e) { console.error(e); }
+            
+            document.body.innerHTML = `<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-family:sans-serif;color:#333;">Project not found or error loading.</div>`;
+            return true;
         }
-        
-        // Create a new project
-        async function createProject() {
-            try {
-                const projectId = Date.now().toString();
-                const projectRef = ref(database, `projects/${projectId}`);
-                
-                const newProject = {
-                    name: 'Untitled Project',
-                    files: {
-                        html: '<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>My Project</title>\n    <link rel="stylesheet" href="style.css">\n</head>\n<body>\n    <h1>Hello World</h1>\n    <script src="script.js"><\/script>\n</body>\n</html>',
-                        css: 'body {\n    font-family: Arial, sans-serif;\n    margin: 0;\n    padding: 20px;\n}',
-                        js: '// Add your JavaScript here\nconsole.log("Hello World!");'
-                    },
-                    lastModified: Date.now(),
-                    isPrivate: false
-                };
-                
-                await set(projectRef, newProject);
-                
-                // Open the newly created project
-                openProject(projectId);
-            } catch (error) {
-                console.error("Error creating project:", error);
-                showNotification("Error creating project. Please try again.");
-            }
-        }
-        
-        // Open a project for editing
-        async function openProject(projectId) {
-            try {
-                const projectRef = ref(database, `projects/${projectId}`);
-                const snapshot = await get(projectRef);
-                
-                if (snapshot.exists()) {
-                    const projectData = snapshot.val();
-                    currentProjectId = projectId;
-                    
-                    // Update UI
-                    projectListView.style.display = 'none';
-                    editorView.style.display = 'flex';
-                    projectNameInput.value = projectData.name || 'Untitled Project';
-                    
-                    // Set editor content
-                    editors.html.setValue(projectData.files.html || '');
-                    editors.css.setValue(projectData.files.css || '');
-                    editors.js.setValue(projectData.files.js || '');
-                    
-                    // Switch to HTML editor by default
-                    switchFile('html');
-                } else {
-                    showNotification("Project not found. It may have been deleted.");
-                    loadProjects();
-                }
-            } catch (error) {
-                console.error("Error opening project:", error);
-                showNotification("Error opening project. Please try again.");
-            }
-        }
-        
-        // Save project to Firebase
-        async function saveProject() {
-            if (!currentProjectId) return;
-            
-            try {
-                const projectRef = ref(database, `projects/${currentProjectId}`);
-                const projectName = projectNameInput.value || 'Untitled Project';
-                
-                const updatedProject = {
-                    name: projectName,
-                    files: {
-                        html: editors.html.getValue(),
-                        css: editors.css.getValue(),
-                        js: editors.js.getValue()
-                    },
-                    lastModified: Date.now()
-                };
-                
-                await update(projectRef, updatedProject);
-                showNotification("Project saved successfully");
-            } catch (error) {
-                console.error("Error saving project:", error);
-                showNotification("Error saving project. Please try again.");
-            }
-        }
-        
-        // Switch between file tabs
-        function switchFile(fileType) {
-            currentFile = fileType;
-            
-            // Update tab styles
-            document.querySelectorAll('.file-tab').forEach(tab => {
-                tab.classList.toggle('active', tab.dataset.file === fileType);
-            });
-            
-            // Show/hide editors
-            Object.entries(editors).forEach(([type, editor]) => {
-                editor.getWrapperElement().style.display = type === fileType ? 'block' : 'none';
-            });
-            
-            // Refresh the current editor to avoid display issues
-            editors[fileType].refresh();
-        }
-        
-        // Save project as ZIP file
-        function saveProjectAsZip() {
-            if (!currentProjectId) return;
-            
-            const zip = new JSZip();
-            const projectName = projectNameInput.value || 'Untitled Project';
-            
-            // Add files to ZIP
-            zip.file('index.html', editors.html.getValue());
-            zip.file('style.css', editors.css.getValue());
-            zip.file('script.js', editors.js.getValue());
-            
-            // Generate and save ZIP
-            zip.generateAsync({ type: 'blob' }).then(content => {
-                saveAs(content, `${projectName.replace(/\s+/g, '_')}.zip`);
-                showNotification("Project downloaded as ZIP");
-            });
-        }
-        
-        // Run project in new window
-        async function runProject() {
-            if (!currentProjectId) return;
-            
-            try {
-                // First save the project
-                await saveProject();
-                
-                // Open in new window
-                const runUrl = `https://bw00111.github.io/mimic/pub/${currentProjectId}`;
-                window.open(runUrl, '_blank');
-            } catch (error) {
-                console.error("Error running project:", error);
-                showNotification("Error running project. Please try again.");
-            }
-        }
-        
-        // Show share modal with links
-        function showShareModal() {
-            if (!currentProjectId) return;
-            
-            const projectName = projectNameInput.value || 'Untitled Project';
-            
-            // Set share links
-            privateLinkInput.value = `https://bw00111.github.io/mimic/pv/${currentProjectId}`;
-            publicLinkInput.value = `https://bw00111.github.io/mimic/pub/${currentProjectId}`;
-            
-            // Show modal
-            shareModal.classList.add('active');
-        }
-        
-        // Copy link to clipboard
-        function copyLink(inputId) {
-            const input = document.getElementById(inputId);
-            input.select();
-            document.execCommand('copy');
-            showNotification("Link copied to clipboard");
-        }
-        
-        // Show notification
-        function showNotification(message) {
-            notification.textContent = message;
-            notification.classList.add('active');
-            
-            setTimeout(() => {
-                notification.classList.remove('active');
-            }, 3000);
-        }
-        
-        // Load settings from localStorage
-        function loadSettings() {
-            const savedSettings = localStorage.getItem('mimic_settings');
-            if (savedSettings) {
-                settings = { ...settings, ...JSON.parse(savedSettings) };
-            }
-            
-            // Update UI
-            autosaveToggle.checked = settings.autosave;
-            autosaveIntervalInput.value = settings.autosaveInterval;
-            tabSizeInput.value = settings.tabSize;
-            wordWrapToggle.checked = settings.wordWrap;
-        }
-        
-        // Save settings to localStorage
-        function saveSettings() {
-            settings = {
-                autosave: autosaveToggle.checked,
-                autosaveInterval: parseInt(autosaveIntervalInput.value),
-                tabSize: parseInt(tabSizeInput.value),
-                wordWrap: wordWrapToggle.checked
-            };
-            
-            localStorage.setItem('mimic_settings', JSON.stringify(settings));
-            
-            // Apply settings to editors
-            Object.values(editors).forEach(editor => {
-                editor.setOption('tabSize', settings.tabSize);
-                editor.setOption('indentUnit', settings.tabSize);
-                editor.setOption('lineWrapping', settings.wordWrap);
-            });
-            
-            // Show/hide settings modal
-            settingsModal.classList.remove('active');
-            showNotification("Settings saved");
-        }
-        
-        // Initialize the app
-        async function init() {
-            // Check if we're in public view mode
-            if (checkPublicView()) {
+
+        // --- PROJECT LIST VIEW ---
+        async function loadProjects() {
+            showView('view-projects');
+            document.getElementById('loading').style.display = 'none';
+            const grid = document.getElementById('projects-grid');
+            grid.innerHTML = '';
+
+            const snap = await get(ref(db, 'projects'));
+            if (!snap.exists()) {
+                grid.innerHTML = '<p style="color:var(--md-sys-color-on-surface-variant)">No projects yet.</p>';
                 return;
             }
-            
-            // Load settings
-            loadSettings();
-            
-            // Initialize editors
-            initEditors();
-            
-            // Load projects
-            await loadProjects();
-            
-            // Hide loading, show app
-            loadingElement.style.display = 'none';
-            appContainer.style.display = 'flex';
-            
-            // Set up event listeners
-            addProjectBtn.addEventListener('click', createProject);
-            
-            document.querySelectorAll('.file-tab').forEach(tab => {
-                tab.addEventListener('click', () => switchFile(tab.dataset.file));
-            });
-            
-            settingsBtn.addEventListener('click', () => {
-                settingsModal.classList.add('active');
-            });
-            
-            cancelSettingsBtn.addEventListener('click', () => {
-                settingsModal.classList.remove('active');
-            });
-            
-            saveSettingsBtn.addEventListener('click', saveSettings);
-            
-            saveBtn.addEventListener('click', saveProjectAsZip);
-            runBtn.addEventListener('click', runProject);
-            shareBtn.addEventListener('click', showShareModal);
-            
-            closeShareBtn.addEventListener('click', () => {
-                shareModal.classList.remove('active');
-            });
-            
-            document.querySelectorAll('.copy-btn').forEach(btn => {
-                btn.addEventListener('click', () => copyLink(btn.dataset.copy));
-            });
-            
-            // Handle project name changes
-            projectNameInput.addEventListener('change', () => {
-                if (currentProjectId && settings.autosave) {
-                    saveProject();
-                }
+
+            Object.entries(snap.val()).forEach(([id, proj]) => {
+                const card = document.createElement('div');
+                card.className = 'm3-card-elevated';
+                const date = proj.lastModified ? new Date(proj.lastModified).toLocaleDateString() : '';
+                card.innerHTML = `
+                    <h3 style="margin-bottom:8px; font-weight:500;">${proj.name || 'Untitled'}</h3>
+                    <p style="font-size:12px; color:var(--md-sys-color-on-surface-variant);">Modified: ${date}</p>
+                `;
+                card.onclick = () => openEditor(id);
+                grid.appendChild(card);
             });
         }
-        
-        // Start the app
+
+        async function createProject() {
+            const id = Date.now().toString();
+            const newProj = {
+                name: "Untitled Project",
+                lastModified: Date.now(),
+                files: {
+                    "index.html": "<!DOCTYPE html>\n<html>\n<head>\n  <title>New Project</title>\n  <link rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>\n  <h1>Hello World</h1>\n  <script src=\"script.js\"><\/script>\n</body>\n</html>",
+                    "style.css": "body {\n  font-family: sans-serif;\n  padding: 20px;\n  background: #f0f0f0;\n}",
+                    "script.js": "console.log('Ready to code!');"
+                }
+            };
+            await set(ref(db, `projects/${id}`), newProj);
+            openEditor(id);
+        }
+
+        // --- EDITOR VIEW ---
+        async function openEditor(id) {
+            currentProjectId = id;
+            const snap = await get(ref(db, `projects/${id}`));
+            if (!snap.exists()) return showSnackbar("Project deleted");
+            
+            projectData = snap.val();
+            document.getElementById('inp-project-name').value = projectData.name;
+            
+            showView('view-editor');
+            initEditorIfNeeded();
+            renderTabs();
+            switchFile("index.html");
+        }
+
+        function initEditorIfNeeded() {
+            if (editor) return;
+            editor = CodeMirror.fromTextArea(document.getElementById('cm-textarea'), {
+                lineNumbers: true, tabSize: 2, indentUnit: 2, mode: 'htmlmixed'
+            });
+            editor.on('change', () => {
+                if (!projectData) return;
+                projectData.files[currentFileName] = editor.getValue();
+                // Debounce Autosave
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(autoSaveToFirebase, 1500);
+            });
+        }
+
+        function renderTabs() {
+            const container = document.getElementById('file-tabs');
+            container.innerHTML = ''; // clear old tabs
+            
+            Object.keys(projectData.files).forEach(fName => {
+                const tab = document.createElement('div');
+                tab.className = `file-tab ${fName === currentFileName ? 'active' : ''}`;
+                tab.innerHTML = `
+                    <span onclick="window.switchTab('${fName}')">${fName}</span>
+                    ${Object.keys(projectData.files).length > 1 ? `<button class="delete-file-btn" onclick="event.stopPropagation(); window.deleteFile('${fName}')">×</button>` : ''}
+                `;
+                container.appendChild(tab);
+            });
+
+            // Re-append the add file button at the end
+            const addBtn = document.createElement('button');
+            addBtn.className = 'm3-icon-btn';
+            addBtn.id = 'btn-add-file';
+            addBtn.title = 'Add File';
+            addBtn.innerHTML = '<span class="material-icons-round">note_add</span>';
+            addBtn.onclick = () => document.getElementById('modal-add-file').classList.add('active');
+            container.appendChild(addBtn);
+        }
+
+        window.switchTab = (fName) => switchFile(fName);
+
+        function switchFile(fName) {
+            currentFileName = fName;
+            editor.setValue(projectData.files[fName] || "");
+            editor.setOption('mode', getModeFromFilename(fName));
+            editor.clearHistory();
+            renderTabs(); // update active state
+            setTimeout(() => editor.refresh(), 10);
+        }
+
+        window.deleteFile = async (fName) => {
+            if (Object.keys(projectData.files).length <= 1) return showSnackbar("Must have at least one file");
+            if (!confirm(`Delete ${fName}?`)) return; // Simple confirmation for destructive action
+            
+            delete projectData.files[fName];
+            const newFirstFile = Object.keys(projectData.files)[0];
+            
+            await update(ref(db, `projects/${currentProjectId}/files`), projectData.files);
+            switchFile(newFirstFile);
+            showSnackbar(`Deleted ${fName}`);
+        };
+
+        window.addNewFile = async () => {
+            const inp = document.getElementById('inp-new-file');
+            let fName = inp.value.trim();
+            if (!fName) return;
+            if (!fName.includes('.')) return showSnackbar("Please include file extension (e.g. .js)");
+            if (projectData.files[fName]) return showSnackbar("File already exists");
+
+            projectData.files[fName] = "";
+            await update(ref(db, `projects/${currentProjectId}/files`), projectData.files);
+            
+            closeModal('modal-add-file');
+            inp.value = '';
+            switchFile(fName);
+            showSnackbar(`Created ${fName}`);
+        };
+
+        async function autoSaveToFirebase() {
+            if (!currentProjectId) return;
+            projectData.name = document.getElementById('inp-project-name').value;
+            projectData.lastModified = Date.now();
+            await update(ref(db, `projects/${currentProjectId}`), projectData);
+        }
+
+        function downloadZip() {
+            if (!projectData) return;
+            const zip = new JSZip();
+            Object.entries(projectData.files).forEach(([name, content]) => zip.file(name, content));
+            zip.generateAsync({ type: "blob" }).then(blob => {
+                saveAs(blob, `${projectData.name.replace(/\s+/g, '_')}.zip`);
+            });
+        }
+
+        function runProject() {
+            if (!currentProjectId) return;
+            autoSaveToFirebase(); // Force save before running
+            window.open(`${BASE_URL}/pub/${currentProjectId}`, '_blank');
+        }
+
+        function openShareModal() {
+            if (!currentProjectId) return;
+            document.getElementById('link-public').value = `${BASE_URL}/pub/${currentProjectId}`;
+            document.getElementById('link-private').value = `${BASE_URL}/pv/${currentProjectId}`;
+            document.getElementById('modal-share').classList.add('active');
+        }
+
+        function applySettings() {
+            const size = parseInt(document.getElementById('set-tabsize').value) || 2;
+            const wrap = document.getElementById('set-wordwrap').checked;
+            if (editor) {
+                editor.setOption('tabSize', size);
+                editor.setOption('indentUnit', size);
+                editor.setOption('lineWrapping', wrap);
+            }
+            closeModal('modal-settings');
+            showSnackbar("Settings applied");
+        }
+
+        // Toggle checkbox UI hack
+        document.getElementById('toggle-wrap').addEventListener('click', function() {
+            const cb = document.getElementById('set-wordwrap');
+            cb.checked = !cb.checked;
+            this.innerHTML = cb.checked ? 'check_box' : 'check_box_outline_blank';
+        });
+
+        // --- INIT & EVENT LISTENERS ---
+        async function init() {
+            // 1. Handle Public Routing First
+            if (await handlePublicRoute()) return;
+
+            // 2. Initialize IDE
+            document.getElementById('btn-new-project').onclick = createProject;
+            document.getElementById('btn-back').onclick = () => { currentProjectId = null; projectData = null; loadProjects(); };
+            document.getElementById('btn-save-zip').onclick = downloadZip;
+            document.getElementById('btn-run').onclick = runProject;
+            document.getElementById('btn-share').onclick = openShareModal;
+            document.getElementById('btn-settings').onclick = () => document.getElementById('modal-settings').classList.add('active');
+            document.getElementById('btn-save-settings').onclick = applySettings;
+            document.getElementById('btn-confirm-add-file').onclick = window.addNewFile;
+
+            // Allow enter key in add file modal
+            document.getElementById('inp-new-file').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') window.addNewFile();
+            });
+
+            loadProjects();
+        }
+
         init();
     </script>
 </body>
