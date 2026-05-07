@@ -1,35 +1,569 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mimic Project Preview</title>
+    <title>Mimic - Web IDE</title>
+    <!-- Firebase -->
+    <script type="module" src="https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js"></script>
+    <!-- CodeMirror -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+    <!-- JSZip and FileSaver -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; }
-        #project-iframe {
-            border: none;
-            width: 100%;
-            height: 100%;
-            display: block; /* Ensure it takes full space */
+        :root {
+            --bg-color: #000;
+            --text-color: #fff;
+            --border-color: #333;
+            --btn-bg: #111;
+            --btn-hover: #222;
         }
-        #error-message {
-            font-family: sans-serif;
-            text-align: center;
-            padding-top: 50px;
-            color: #dc3545; /* Red error message */
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: var(--bg-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .project-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .project-name {
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            font-size: 16px;
+            font-weight: bold;
+            padding: 5px;
+            width: 200px;
+        }
+        
+        .project-name:focus {
+            outline: none;
+            border-bottom: 1px solid var(--text-color);
+        }
+        
+        .settings-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 18px;
+            padding: 5px;
+        }
+        
+        .settings-btn:hover {
+            color: #aaa;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .action-btn {
+            background-color: var(--btn-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        .action-btn:hover {
+            background-color: var(--btn-hover);
+        }
+        
+        /* Editor Area */
+        .editor-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .file-tabs {
+            display: flex;
+            background-color: #111;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .file-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-right: 1px solid var(--border-color);
+            font-size: 14px;
+        }
+        
+        .file-tab.active {
+            background-color: var(--bg-color);
+            border-bottom: 2px solid var(--text-color);
+        }
+        
+        .file-tab:hover {
+            background-color: #222;
+        }
+        
+        .editor-wrapper {
+            flex-grow: 1;
+            overflow: hidden;
+        }
+        
+        .CodeMirror {
+            height: 100%;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        
+        .CodeMirror-gutters {
+            background-color: #111;
+            border-right: 1px solid var(--border-color);
+        }
+        
+        .CodeMirror-linenumber {
+            color: #666;
+        }
+        
+        /* Project List */
+        .project-list-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+            height: 100vh;
+        }
+        
+        .project-list-title {
+            font-size: 32px;
+            margin-bottom: 40px;
+        }
+        
+        .project-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+            margin-bottom: 40px;
+        }
+        
+        .project-card {
+            background-color: #111;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 20px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.1);
+        }
+        
+        .project-card-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .project-card-date {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .add-project-btn {
+            background-color: #111;
+            border: 2px dashed var(--border-color);
+            color: var(--text-color);
+            padding: 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            max-width: 1200px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        
+        .add-project-btn:hover {
+            background-color: #222;
+        }
+        
+        /* Settings Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal {
+            background-color: #111;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 30px;
+            width: 500px;
+            max-width: 90%;
+        }
+        
+        .modal-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        
+        .modal-content {
+            margin-bottom: 20px;
+        }
+        
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .setting-label {
+            font-size: 16px;
+        }
+        
+        .setting-input {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px;
+            width: 200px;
+        }
+        
+        .setting-toggle {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        
+        .setting-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #333;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: #2196F3;
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+        
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .modal-btn {
+            background-color: var(--btn-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        .modal-btn:hover {
+            background-color: var(--btn-hover);
+        }
+        
+        .modal-btn.primary {
+            background-color: #333;
+        }
+        
+        /* Share Modal */
+        .share-links {
+            margin-bottom: 20px;
+        }
+        
+        .share-link-item {
+            margin-bottom: 15px;
+        }
+        
+        .share-link-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .share-link-container {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .share-link-input {
+            flex-grow: 1;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px;
+            font-size: 14px;
+        }
+        
+        .copy-btn {
+            background-color: var(--btn-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        .copy-btn:hover {
+            background-color: var(--btn-hover);
+        }
+        
+        /* Notification */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #333;
+            color: var(--text-color);
+            padding: 15px 20px;
+            border-radius: 5px;
+            z-index: 1000;
+            display: none;
+            font-size: 14px;
+        }
+        
+        .notification.active {
+            display: block;
+            animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(20px); }
+        }
+        
+        /* Loading */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #333;
+            border-top: 4px solid var(--text-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Public View */
+        .public-view {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div id="error-message" style="display: none;"></div>
-    <iframe id="project-iframe" src="about:blank"></iframe>
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+    </div>
+    
+    <div class="app-container" id="app-container" style="display: none;">
+        <!-- Project List View -->
+        <div class="project-list-container" id="project-list-view">
+            <h1 class="project-list-title">Mimic</h1>
+            <div class="project-grid" id="project-grid">
+                <!-- Projects will be loaded here -->
+            </div>
+            <button class="add-project-btn" id="add-project-btn">+ New Project</button>
+        </div>
+        
+        <!-- Editor View -->
+        <div class="editor-container" id="editor-view" style="display: none;">
+            <div class="top-bar">
+                <div class="project-info">
+                    <input type="text" class="project-name" id="project-name" placeholder="Project Name">
+                    <button class="settings-btn" id="settings-btn">⚙️</button>
+                </div>
+                <div class="action-buttons">
+                    <button class="action-btn" id="save-btn">💾 Save</button>
+                    <button class="action-btn" id="run-btn">▶️ Run</button>
+                    <button class="action-btn" id="share-btn">🔗 Share</button>
+                </div>
+            </div>
+            <div class="file-tabs">
+                <div class="file-tab active" data-file="html">index.html</div>
+                <div class="file-tab" data-file="css">style.css</div>
+                <div class="file-tab" data-file="js">script.js</div>
+            </div>
+            <div class="editor-wrapper">
+                <textarea id="code-editor"></textarea>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal">
+            <h2 class="modal-title">Settings</h2>
+            <div class="modal-content">
+                <div class="setting-item">
+                    <span class="setting-label">Autosave</span>
+                    <label class="setting-toggle">
+                        <input type="checkbox" id="autosave-toggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <span class="setting-label">Autosave Interval (seconds)</span>
+                    <input type="number" class="setting-input" id="autosave-interval" value="5" min="1">
+                </div>
+                <div class="setting-item">
+                    <span class="setting-label">Tab Size</span>
+                    <input type="number" class="setting-input" id="tab-size" value="2" min="1" max="8">
+                </div>
+                <div class="setting-item">
+                    <span class="setting-label">Word Wrap</span>
+                    <label class="setting-toggle">
+                        <input type="checkbox" id="word-wrap-toggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn" id="cancel-settings-btn">Cancel</button>
+                <button class="modal-btn primary" id="save-settings-btn">Save</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Share Modal -->
+    <div class="modal-overlay" id="share-modal">
+        <div class="modal">
+            <h2 class="modal-title">Share Project</h2>
+            <div class="modal-content">
+                <div class="share-links">
+                    <div class="share-link-item">
+                        <div class="share-link-label">Private Link (only you can view)</div>
+                        <div class="share-link-container">
+                            <input type="text" class="share-link-input" id="private-link" readonly>
+                            <button class="copy-btn" data-copy="private-link">Copy</button>
+                        </div>
+                    </div>
+                    <div class="share-link-item">
+                        <div class="share-link-label">Public Link (anyone can view)</div>
+                        <div class="share-link-container">
+                            <input type="text" class="share-link-input" id="public-link" readonly>
+                            <button class="copy-btn" data-copy="public-link">Copy</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn" id="close-share-btn">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+    
+    <!-- Public View (for running projects) -->
+    <div class="public-view" id="public-view"></div>
 
-    <!-- Firebase SDKs (repeated for the preview page) -->
     <script type="module">
+        // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
-        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
-
-        // Your Firebase config (must be repeated here)
+        import { getDatabase, ref, set, get, update, remove } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
+        
+        // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyBk_9ZoyexrPZON-JowtMeNgWCzpfsQyeM",
             authDomain: "mimic-799e5.firebaseapp.com",
@@ -40,56 +574,509 @@
             appId: "1:914081698620:web:2bb171c9afb66efa66c439",
             measurementId: "G-5TP997CQC8"
         };
+        
+        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const projectId = urlParams.get('projectId');
-        // const mode = urlParams.get('mode'); // 'pub' or 'pv' - can be used for future authentication
-
-        const errorMessageDiv = document.getElementById('error-message');
-        const iframe = document.getElementById('project-iframe');
-
-        if (projectId) {
-            const projectRef = ref(database, `projects/${projectId}`);
-            onValue(projectRef, (snapshot) => {
-                const project = snapshot.val();
-                if (project) {
-                    const iframeDoc = iframe.contentWindow.document;
-
-                    // Construct the full HTML with embedded CSS and JS
-                    const fullHtml = `
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                            <title>${project.name || 'Mimic Project'}</title>
-                            <style>${project.css || ''}</style>
-                            <base href="${window.location.href}"> <!-- Important for relative paths inside iframe -->
-                        </head>
-                        <body>
-                            ${project.html || ''}
-                            <script>${project.js || ''}</script>
-                        </body>
-                        </html>
-                    `;
-                    iframeDoc.open();
-                    iframeDoc.write(fullHtml);
-                    iframeDoc.close();
-
-                    // Set the parent window's title to match the project's title for a better feel
-                    document.title = project.name ? `${project.name} | Mimic Preview` : 'Mimic Project Preview';
-
-                } else {
-                    errorMessageDiv.style.display = 'block';
-                    errorMessageDiv.textContent = 'Project Not Found or Deleted.';
-                    iframe.style.display = 'none'; // Hide iframe if no project
-                }
-            }, { onlyOnce: true });
-        } else {
-            errorMessageDiv.style.display = 'block';
-            errorMessageDiv.textContent = 'Error: Project ID missing in URL.';
-            iframe.style.display = 'none'; // Hide iframe if no project ID
+        
+        // App state
+        let currentProjectId = null;
+        let currentFile = 'html';
+        let editors = {};
+        let autosaveInterval = null;
+        let settings = {
+            autosave: true,
+            autosaveInterval: 5,
+            tabSize: 2,
+            wordWrap: false
+        };
+        
+        // DOM elements
+        const loadingElement = document.getElementById('loading');
+        const appContainer = document.getElementById('app-container');
+        const projectListView = document.getElementById('project-list-view');
+        const projectGrid = document.getElementById('project-grid');
+        const addProjectBtn = document.getElementById('add-project-btn');
+        const editorView = document.getElementById('editor-view');
+        const projectNameInput = document.getElementById('project-name');
+        const settingsBtn = document.getElementById('settings-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const runBtn = document.getElementById('run-btn');
+        const shareBtn = document.getElementById('share-btn');
+        const settingsModal = document.getElementById('settings-modal');
+        const autosaveToggle = document.getElementById('autosave-toggle');
+        const autosaveIntervalInput = document.getElementById('autosave-interval');
+        const tabSizeInput = document.getElementById('tab-size');
+        const wordWrapToggle = document.getElementById('word-wrap-toggle');
+        const cancelSettingsBtn = document.getElementById('cancel-settings-btn');
+        const saveSettingsBtn = document.getElementById('save-settings-btn');
+        const shareModal = document.getElementById('share-modal');
+        const privateLinkInput = document.getElementById('private-link');
+        const publicLinkInput = document.getElementById('public-link');
+        const closeShareBtn = document.getElementById('close-share-btn');
+        const notification = document.getElementById('notification');
+        const publicView = document.getElementById('public-view');
+        
+        // Check if we're in public view mode
+        function checkPublicView() {
+            const path = window.location.pathname;
+            const isPublicView = path.includes('/pub/') || path.includes('/pv/');
+            
+            if (isPublicView) {
+                const parts = path.split('/');
+                const projectId = parts[parts.length - 1];
+                const isPrivate = path.includes('/pv/');
+                
+                loadProjectForPublicView(projectId, isPrivate);
+                return true;
+            }
+            
+            return false;
         }
+        
+        // Load project for public view
+        async function loadProjectForPublicView(projectId, isPrivate) {
+            try {
+                const projectRef = ref(database, `projects/${projectId}`);
+                const snapshot = await get(projectRef);
+                
+                if (snapshot.exists()) {
+                    const projectData = snapshot.val();
+                    
+                    // Check if private project and access is allowed
+                    if (isPrivate && !projectData.isPrivate) {
+                        // Redirect to public version
+                        window.location.href = `https://bw00111.github.io/mimic/pub/${projectId}`;
+                        return;
+                    }
+                    
+                    // Render the project
+                    publicView.style.display = 'block';
+                    appContainer.style.display = 'none';
+                    loadingElement.style.display = 'none';
+                    
+                    // Create a complete HTML document with embedded CSS and JS
+                    const htmlContent = projectData.files.html || '';
+                    const cssContent = projectData.files.css || '';
+                    const jsContent = projectData.files.js || '';
+                    
+                    // Extract title from HTML if present
+                    const titleMatch = htmlContent.match(/<title>(.*?)<\/title>/i);
+                    const title = titleMatch ? titleMatch[1] : projectData.name || 'Mimic Project';
+                    document.title = title;
+                    
+                    // Extract favicon if present
+                    const faviconMatch = htmlContent.match(/<link[^>]*rel=["']icon["'][^>]*>/i);
+                    if (faviconMatch) {
+                        const favicon = document.createElement('link');
+                        favicon.innerHTML = faviconMatch[0];
+                        document.head.appendChild(favicon.firstChild);
+                    }
+                    
+                    // Create a complete document with CSS and JS embedded
+                    let fullHtml = htmlContent;
+                    
+                    // Add CSS if not already present
+                    if (cssContent && !htmlContent.includes(cssContent)) {
+                        fullHtml = fullHtml.replace('</head>', `<style>${cssContent}</style></head>`);
+                        if (!fullHtml.includes('</head>')) {
+                            fullHtml = `<style>${cssContent}</style>${fullHtml}`;
+                        }
+                    }
+                    
+                    // Add JS if not already present
+                    if (jsContent && !htmlContent.includes(jsContent)) {
+                        fullHtml = fullHtml.replace('</body>', `<script>${jsContent}<\/script></body>`);
+                        if (!fullHtml.includes('</body>')) {
+                            fullHtml = `${fullHtml}<script>${jsContent}<\/script>`;
+                        }
+                    }
+                    
+                    // Use an iframe to isolate the project
+                    const iframe = document.createElement('iframe');
+                    iframe.style.width = '100%';
+                    iframe.style.height = '100vh';
+                    iframe.style.border = 'none';
+                    iframe.style.position = 'fixed';
+                    iframe.style.top = '0';
+                    iframe.style.left = '0';
+                    iframe.style.zIndex = '-1';
+                    publicView.appendChild(iframe);
+                    
+                    // Write content to iframe
+                    iframe.contentDocument.open();
+                    iframe.contentDocument.write(fullHtml);
+                    iframe.contentDocument.close();
+                } else {
+                    publicView.innerHTML = `
+                        <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; color: white; font-family: Arial, sans-serif;">
+                            <h1 style="margin-bottom: 20px;">Project Not Found</h1>
+                            <p>The project you're looking for doesn't exist or has been deleted.</p>
+                            <a href="https://bw00111.github.io/mimic/" style="margin-top: 20px; color: white; text-decoration: underline;">Go to Mimic</a>
+                        </div>
+                    `;
+                    document.title = "Project Not Found";
+                }
+            } catch (error) {
+                console.error("Error loading project for public view:", error);
+                publicView.innerHTML = `
+                    <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; color: white; font-family: Arial, sans-serif;">
+                        <h1 style="margin-bottom: 20px;">Error Loading Project</h1>
+                        <p>There was an error loading this project. Please try again later.</p>
+                        <a href="https://bw00111.github.io/mimic/" style="margin-top: 20px; color: white; text-decoration: underline;">Go to Mimic</a>
+                    </div>
+                `;
+                document.title = "Error";
+            }
+        }
+        
+        // Initialize CodeMirror editors
+        function initEditors() {
+            const commonOptions = {
+                lineNumbers: true,
+                tabSize: settings.tabSize,
+                indentUnit: settings.tabSize,
+                lineWrapping: settings.wordWrap,
+                theme: 'default'
+            };
+            
+            // Create editors for each file type
+            editors.html = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+                ...commonOptions,
+                mode: 'htmlmixed'
+            });
+            
+            // We'll reuse the same textarea but switch modes and content
+            editors.css = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+                ...commonOptions,
+                mode: 'css'
+            });
+            
+            editors.js = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+                ...commonOptions,
+                mode: 'javascript'
+            });
+            
+            // Initially show only the HTML editor
+            editors.html.getWrapperElement().style.display = 'block';
+            editors.css.getWrapperElement().style.display = 'none';
+            editors.js.getWrapperElement().style.display = 'none';
+            
+            // Set up change listeners for autosave
+            Object.values(editors).forEach(editor => {
+                editor.on('change', () => {
+                    if (settings.autosave) {
+                        clearTimeout(autosaveInterval);
+                        autosaveInterval = setTimeout(saveProject, settings.autosaveInterval * 1000);
+                    }
+                });
+            });
+        }
+        
+        // Load projects from Firebase
+        async function loadProjects() {
+            try {
+                const projectsRef = ref(database, 'projects');
+                const snapshot = await get(projectsRef);
+                
+                projectGrid.innerHTML = '';
+                
+                if (snapshot.exists()) {
+                    const projects = snapshot.val();
+                    
+                    Object.entries(projects).forEach(([id, project]) => {
+                        const projectCard = document.createElement('div');
+                        projectCard.className = 'project-card';
+                        projectCard.dataset.id = id;
+                        
+                        const lastModified = project.lastModified 
+                            ? new Date(project.lastModified).toLocaleDateString() 
+                            : 'Unknown';
+                        
+                        projectCard.innerHTML = `
+                            <div class="project-card-title">${project.name || 'Untitled Project'}</div>
+                            <div class="project-card-date">Last modified: ${lastModified}</div>
+                        `;
+                        
+                        projectCard.addEventListener('click', () => openProject(id));
+                        projectGrid.appendChild(projectCard);
+                    });
+                } else {
+                    projectGrid.innerHTML = '<p>No projects yet. Create a new one to get started.</p>';
+                }
+            } catch (error) {
+                console.error("Error loading projects:", error);
+                projectGrid.innerHTML = '<p>Error loading projects. Please try again later.</p>';
+            }
+        }
+        
+        // Create a new project
+        async function createProject() {
+            try {
+                const projectId = Date.now().toString();
+                const projectRef = ref(database, `projects/${projectId}`);
+                
+                const newProject = {
+                    name: 'Untitled Project',
+                    files: {
+                        html: '<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>My Project</title>\n    <link rel="stylesheet" href="style.css">\n</head>\n<body>\n    <h1>Hello World</h1>\n    <script src="script.js"><\/script>\n</body>\n</html>',
+                        css: 'body {\n    font-family: Arial, sans-serif;\n    margin: 0;\n    padding: 20px;\n}',
+                        js: '// Add your JavaScript here\nconsole.log("Hello World!");'
+                    },
+                    lastModified: Date.now(),
+                    isPrivate: false
+                };
+                
+                await set(projectRef, newProject);
+                
+                // Open the newly created project
+                openProject(projectId);
+            } catch (error) {
+                console.error("Error creating project:", error);
+                showNotification("Error creating project. Please try again.");
+            }
+        }
+        
+        // Open a project for editing
+        async function openProject(projectId) {
+            try {
+                const projectRef = ref(database, `projects/${projectId}`);
+                const snapshot = await get(projectRef);
+                
+                if (snapshot.exists()) {
+                    const projectData = snapshot.val();
+                    currentProjectId = projectId;
+                    
+                    // Update UI
+                    projectListView.style.display = 'none';
+                    editorView.style.display = 'flex';
+                    projectNameInput.value = projectData.name || 'Untitled Project';
+                    
+                    // Set editor content
+                    editors.html.setValue(projectData.files.html || '');
+                    editors.css.setValue(projectData.files.css || '');
+                    editors.js.setValue(projectData.files.js || '');
+                    
+                    // Switch to HTML editor by default
+                    switchFile('html');
+                } else {
+                    showNotification("Project not found. It may have been deleted.");
+                    loadProjects();
+                }
+            } catch (error) {
+                console.error("Error opening project:", error);
+                showNotification("Error opening project. Please try again.");
+            }
+        }
+        
+        // Save project to Firebase
+        async function saveProject() {
+            if (!currentProjectId) return;
+            
+            try {
+                const projectRef = ref(database, `projects/${currentProjectId}`);
+                const projectName = projectNameInput.value || 'Untitled Project';
+                
+                const updatedProject = {
+                    name: projectName,
+                    files: {
+                        html: editors.html.getValue(),
+                        css: editors.css.getValue(),
+                        js: editors.js.getValue()
+                    },
+                    lastModified: Date.now()
+                };
+                
+                await update(projectRef, updatedProject);
+                showNotification("Project saved successfully");
+            } catch (error) {
+                console.error("Error saving project:", error);
+                showNotification("Error saving project. Please try again.");
+            }
+        }
+        
+        // Switch between file tabs
+        function switchFile(fileType) {
+            currentFile = fileType;
+            
+            // Update tab styles
+            document.querySelectorAll('.file-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.file === fileType);
+            });
+            
+            // Show/hide editors
+            Object.entries(editors).forEach(([type, editor]) => {
+                editor.getWrapperElement().style.display = type === fileType ? 'block' : 'none';
+            });
+            
+            // Refresh the current editor to avoid display issues
+            editors[fileType].refresh();
+        }
+        
+        // Save project as ZIP file
+        function saveProjectAsZip() {
+            if (!currentProjectId) return;
+            
+            const zip = new JSZip();
+            const projectName = projectNameInput.value || 'Untitled Project';
+            
+            // Add files to ZIP
+            zip.file('index.html', editors.html.getValue());
+            zip.file('style.css', editors.css.getValue());
+            zip.file('script.js', editors.js.getValue());
+            
+            // Generate and save ZIP
+            zip.generateAsync({ type: 'blob' }).then(content => {
+                saveAs(content, `${projectName.replace(/\s+/g, '_')}.zip`);
+                showNotification("Project downloaded as ZIP");
+            });
+        }
+        
+        // Run project in new window
+        async function runProject() {
+            if (!currentProjectId) return;
+            
+            try {
+                // First save the project
+                await saveProject();
+                
+                // Open in new window
+                const runUrl = `https://bw00111.github.io/mimic/pub/${currentProjectId}`;
+                window.open(runUrl, '_blank');
+            } catch (error) {
+                console.error("Error running project:", error);
+                showNotification("Error running project. Please try again.");
+            }
+        }
+        
+        // Show share modal with links
+        function showShareModal() {
+            if (!currentProjectId) return;
+            
+            const projectName = projectNameInput.value || 'Untitled Project';
+            
+            // Set share links
+            privateLinkInput.value = `https://bw00111.github.io/mimic/pv/${currentProjectId}`;
+            publicLinkInput.value = `https://bw00111.github.io/mimic/pub/${currentProjectId}`;
+            
+            // Show modal
+            shareModal.classList.add('active');
+        }
+        
+        // Copy link to clipboard
+        function copyLink(inputId) {
+            const input = document.getElementById(inputId);
+            input.select();
+            document.execCommand('copy');
+            showNotification("Link copied to clipboard");
+        }
+        
+        // Show notification
+        function showNotification(message) {
+            notification.textContent = message;
+            notification.classList.add('active');
+            
+            setTimeout(() => {
+                notification.classList.remove('active');
+            }, 3000);
+        }
+        
+        // Load settings from localStorage
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('mimic_settings');
+            if (savedSettings) {
+                settings = { ...settings, ...JSON.parse(savedSettings) };
+            }
+            
+            // Update UI
+            autosaveToggle.checked = settings.autosave;
+            autosaveIntervalInput.value = settings.autosaveInterval;
+            tabSizeInput.value = settings.tabSize;
+            wordWrapToggle.checked = settings.wordWrap;
+        }
+        
+        // Save settings to localStorage
+        function saveSettings() {
+            settings = {
+                autosave: autosaveToggle.checked,
+                autosaveInterval: parseInt(autosaveIntervalInput.value),
+                tabSize: parseInt(tabSizeInput.value),
+                wordWrap: wordWrapToggle.checked
+            };
+            
+            localStorage.setItem('mimic_settings', JSON.stringify(settings));
+            
+            // Apply settings to editors
+            Object.values(editors).forEach(editor => {
+                editor.setOption('tabSize', settings.tabSize);
+                editor.setOption('indentUnit', settings.tabSize);
+                editor.setOption('lineWrapping', settings.wordWrap);
+            });
+            
+            // Show/hide settings modal
+            settingsModal.classList.remove('active');
+            showNotification("Settings saved");
+        }
+        
+        // Initialize the app
+        async function init() {
+            // Check if we're in public view mode
+            if (checkPublicView()) {
+                return;
+            }
+            
+            // Load settings
+            loadSettings();
+            
+            // Initialize editors
+            initEditors();
+            
+            // Load projects
+            await loadProjects();
+            
+            // Hide loading, show app
+            loadingElement.style.display = 'none';
+            appContainer.style.display = 'flex';
+            
+            // Set up event listeners
+            addProjectBtn.addEventListener('click', createProject);
+            
+            document.querySelectorAll('.file-tab').forEach(tab => {
+                tab.addEventListener('click', () => switchFile(tab.dataset.file));
+            });
+            
+            settingsBtn.addEventListener('click', () => {
+                settingsModal.classList.add('active');
+            });
+            
+            cancelSettingsBtn.addEventListener('click', () => {
+                settingsModal.classList.remove('active');
+            });
+            
+            saveSettingsBtn.addEventListener('click', saveSettings);
+            
+            saveBtn.addEventListener('click', saveProjectAsZip);
+            runBtn.addEventListener('click', runProject);
+            shareBtn.addEventListener('click', showShareModal);
+            
+            closeShareBtn.addEventListener('click', () => {
+                shareModal.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.copy-btn').forEach(btn => {
+                btn.addEventListener('click', () => copyLink(btn.dataset.copy));
+            });
+            
+            // Handle project name changes
+            projectNameInput.addEventListener('change', () => {
+                if (currentProjectId && settings.autosave) {
+                    saveProject();
+                }
+            });
+        }
+        
+        // Start the app
+        init();
     </script>
 </body>
 </html>
