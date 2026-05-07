@@ -140,7 +140,7 @@
         #view-render { display: none; position: fixed; inset: 0; background: white; z-index: -1; }
         #view-render iframe { width: 100%; height: 100%; border: none; }
 
-        .snackbar { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background-color: var(--md-sys-color-on-surface); color: var(--md-sys-color-surface); padding: 14px 24px; border-radius: 12px; font-size: 14px; z-index: 2000; transition: transform 300ms cubic-bezier(0.2, 0, 0, 1); box-shadow: var(--md-sys-elevation-3); max-width: 90%; word-wrap: break-word;}
+        .snackbar { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background-color: var(--md-sys-color-on-surface); color: var(--md-sys-color-surface); padding: 14px 24px; border-radius: 12px; font-size: 14px; z-index: 2000; transition: transform 300ms cubic-bezier(0.2, 0, 0, 1); box-shadow: var(--md-sys-elevation-3); }
         .snackbar.show { transform: translateX(-50%) translateY(0); }
 
         .share-link-box { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
@@ -188,7 +188,7 @@
         </div>
     </div>
 
-    <!-- VIEW 3: Render -->
+    <!-- VIEW 3: Render (for /pub/ and /pv/) -->
     <div id="view-render"><iframe id="render-iframe"></iframe></div>
 
     <!-- MODALS -->
@@ -275,7 +275,7 @@
             const sb = document.getElementById('snackbar');
             sb.textContent = msg;
             sb.classList.add('show');
-            setTimeout(() => sb.classList.remove('show'), 4000); // Longer display to read errors
+            setTimeout(() => sb.classList.remove('show'), 3000);
         }
 
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
@@ -295,27 +295,27 @@
 
         // --- PUBLIC VIEW LOGIC ---
         async function handlePublicRoute() {
+            const path = window.location.pathname;
+            let isPublic = path.includes('/pub/');
+            let isPrivate = path.includes('/pv/');
+            
+            if (!isPublic && !isPrivate) return false;
+
+            const parts = path.replace(/\/$/, '').split('/');
+            const projectId = parts[parts.length - 1];
+
             try {
-                const path = window.location.pathname;
-                let isPublic = path.includes('/pub/');
-                let isPrivate = path.includes('/pv/');
-                
-                if (!isPublic && !isPrivate) return false;
-
-                const parts = path.replace(/\/$/, '').split('/');
-                const projectId = parts[parts.length - 1];
-
                 const snap = await get(ref(db, `projects/${projectId}`));
                 if (snap.exists()) {
                     const data = snap.val();
                     document.title = data.name || "Mimic Project";
                     
-                    // Ensure data.files is an array (handles old broken data gracefully)
-                    const files = Array.isArray(data.files) ? data.files : [];
-                    const htmlObj = files.find(f => f.name === 'index.html');
+                    // Find index.html
+                    const htmlObj = data.files.find(f => f.name === 'index.html');
                     let htmlContent = htmlObj ? htmlObj.content : '<h1>No index.html found</h1>';
                     
-                    files.forEach(file => {
+                    // Inject all CSS and JS files into the iframe automatically
+                    data.files.forEach(file => {
                         if (file.name.endsWith('.css') && !htmlContent.includes(file.name)) {
                             htmlContent = htmlContent.replace('</head>', `<style>\n${file.content}\n</style>\n</head>`);
                         }
@@ -329,96 +329,67 @@
                     document.getElementById('render-iframe').srcdoc = htmlContent;
                     return true;
                 }
-            } catch (error) {
-                console.error("Public route error:", error);
-            }
-            return false;
+            } catch(e) { console.error(e); }
+            
+            document.body.innerHTML = `<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-family:sans-serif;color:#333;">Project not found or error loading.</div>`;
+            return true;
         }
 
         // --- PROJECT LIST VIEW ---
         async function loadProjects() {
-            try {
-                showView('view-projects');
-                document.getElementById('loading').style.display = 'none';
-                const grid = document.getElementById('projects-grid');
-                grid.innerHTML = '';
+            showView('view-projects');
+            document.getElementById('loading').style.display = 'none';
+            const grid = document.getElementById('projects-grid');
+            grid.innerHTML = '';
 
-                const snap = await get(ref(db, 'projects'));
-                if (!snap.exists()) {
-                    grid.innerHTML = '<p style="color:var(--md-sys-color-on-surface-variant)">No projects yet. Click "New Project" to start.</p>';
-                    return;
-                }
-
-                Object.entries(snap.val()).forEach(([id, proj]) => {
-                    const card = document.createElement('div');
-                    card.className = 'm3-card-elevated';
-                    const date = proj.lastModified ? new Date(proj.lastModified).toLocaleDateString() : '';
-                    card.innerHTML = `
-                        <h3 style="margin-bottom:8px; font-weight:500;">${proj.name || 'Untitled'}</h3>
-                        <p style="font-size:12px; color:var(--md-sys-color-on-surface-variant);">Modified: ${date}</p>
-                    `;
-                    card.onclick = () => openEditor(id);
-                    grid.appendChild(card);
-                });
-            } catch (error) {
-                showSnackbar("Failed to load projects: " + error.message);
+            const snap = await get(ref(db, 'projects'));
+            if (!snap.exists()) {
+                grid.innerHTML = '<p style="color:var(--md-sys-color-on-surface-variant)">No projects yet.</p>';
+                return;
             }
+
+            Object.entries(snap.val()).forEach(([id, proj]) => {
+                const card = document.createElement('div');
+                card.className = 'm3-card-elevated';
+                const date = proj.lastModified ? new Date(proj.lastModified).toLocaleDateString() : '';
+                card.innerHTML = `
+                    <h3 style="margin-bottom:8px; font-weight:500;">${proj.name || 'Untitled'}</h3>
+                    <p style="font-size:12px; color:var(--md-sys-color-on-surface-variant);">Modified: ${date}</p>
+                `;
+                card.onclick = () => openEditor(id);
+                grid.appendChild(card);
+            });
         }
 
         async function createProject() {
-            try {
-                showSnackbar("Creating project..."); // Instant visual feedback
-                const id = Date.now().toString();
-                
-                const newProj = {
-                    name: "Untitled Project",
-                    lastModified: Date.now(),
-                    files: [
-                        { name: "index.html", content: "<!DOCTYPE html>\n<html>\n<head>\n  <title>New Project</title>\n  <link rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>\n  <h1>Hello World</h1>\n  <script src=\"script.js\"><\/script>\n</body>\n</html>" },
-                        { name: "style.css", content: "body {\n  font-family: sans-serif;\n  padding: 20px;\n  background: #f0f0f0;\n}" },
-                        { name: "script.js", content: "console.log('Ready to code!');" }
-                    ]
-                };
-                
-                await set(ref(db, `projects/${id}`), newProj);
-                openEditor(id);
-            } catch (error) {
-                console.error("Create Error:", error);
-                showSnackbar("Error creating project: " + error.message);
-            }
+            const id = Date.now().toString();
+            // FILES ARE NOW AN ARRAY OF OBJECTS TO AVOID FIREBASE DOT (.) KEY ERRORS
+            const newProj = {
+                name: "Untitled Project",
+                lastModified: Date.now(),
+                files: [
+                    { name: "index.html", content: "<!DOCTYPE html>\n<html>\n<head>\n  <title>New Project</title>\n  <link rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>\n  <h1>Hello World</h1>\n  <script src=\"script.js\"><\/script>\n</body>\n</html>" },
+                    { name: "style.css", content: "body {\n  font-family: sans-serif;\n  padding: 20px;\n  background: #f0f0f0;\n}" },
+                    { name: "script.js", content: "console.log('Ready to code!');" }
+                ]
+            };
+            await set(ref(db, `projects/${id}`), newProj);
+            openEditor(id);
         }
 
         // --- EDITOR VIEW ---
         async function openEditor(id) {
-            try {
-                showSnackbar("Loading editor...");
-                currentProjectId = id;
-                const snap = await get(ref(db, `projects/${id}`));
-                
-                if (!snap.exists()) {
-                    showSnackbar("Error: Project was deleted");
-                    loadProjects();
-                    return;
-                }
-                
-                projectData = snap.val();
-                
-                // Convert old object files to array if user has old broken data in DB
-                if (!Array.isArray(projectData.files)) {
-                    projectData.files = Object.entries(projectData.files || {}).map(([name, content]) => ({name, content}));
-                }
-                
-                document.getElementById('inp-project-name').value = projectData.name;
-                
-                showView('view-editor');
-                initEditorIfNeeded();
-                renderTabs();
-                switchFile("index.html");
-                showSnackbar("Project loaded!"); // Success confirmation
-            } catch (error) {
-                console.error("Open Editor Error:", error);
-                showSnackbar("Failed to open project: " + error.message);
-            }
+            currentProjectId = id;
+            const snap = await get(ref(db, `projects/${id}`));
+            if (!snap.exists()) return showSnackbar("Project deleted");
+            
+            projectData = snap.val();
+            document.getElementById('inp-project-name').value = projectData.name;
+            
+            showView('view-editor');
+            initEditorIfNeeded();
+            renderTabs();
+            switchFile("index.html");
         }
 
         function initEditorIfNeeded() {
@@ -428,6 +399,7 @@
             });
             editor.on('change', () => {
                 if (!projectData) return;
+                // Find correct file object and update its content
                 const fileObj = projectData.files.find(f => f.name === currentFileName);
                 if (fileObj) fileObj.content = editor.getValue();
                 
@@ -481,82 +453,60 @@
         }
 
         async function deleteFile(fName) {
-            try {
-                if (projectData.files.length <= 1) return showSnackbar("Must have at least one file");
-                if (!confirm(`Delete ${fName}?`)) return; 
-                
-                projectData.files = projectData.files.filter(f => f.name !== fName);
-                
-                await set(ref(db, `projects/${currentProjectId}/files`), projectData.files);
-                switchFile(projectData.files[0].name);
-                showSnackbar(`Deleted ${fName}`);
-            } catch (error) {
-                showSnackbar("Delete failed: " + error.message);
-            }
+            if (projectData.files.length <= 1) return showSnackbar("Must have at least one file");
+            if (!confirm(`Delete ${fName}?`)) return; 
+            
+            projectData.files = projectData.files.filter(f => f.name !== fName);
+            const newFirstFile = projectData.files[0].name;
+            
+            // Use SET instead of UPDATE to prevent Firebase from leaving null array holes
+            await set(ref(db, `projects/${currentProjectId}/files`), projectData.files);
+            switchFile(newFirstFile);
+            showSnackbar(`Deleted ${fName}`);
         }
 
         async function addNewFile() {
-            try {
-                const inp = document.getElementById('inp-new-file');
-                let fName = inp.value.trim();
-                if (!fName) return;
-                if (!fName.includes('.')) return showSnackbar("Please include file extension (e.g. .js)");
-                if (projectData.files.find(f => f.name === fName)) return showSnackbar("File already exists");
+            const inp = document.getElementById('inp-new-file');
+            let fName = inp.value.trim();
+            if (!fName) return;
+            if (!fName.includes('.')) return showSnackbar("Please include file extension (e.g. .js)");
+            if (projectData.files.find(f => f.name === fName)) return showSnackbar("File already exists");
 
-                projectData.files.push({ name: fName, content: "" });
-                
-                await set(ref(db, `projects/${currentProjectId}/files`), projectData.files);
-                
-                closeModal('modal-add-file');
-                inp.value = '';
-                switchFile(fName);
-                showSnackbar(`Created ${fName}`);
-            } catch (error) {
-                showSnackbar("Add file failed: " + error.message);
-            }
+            projectData.files.push({ name: fName, content: "" });
+            
+            // Use SET to avoid array null errors in Firebase
+            await set(ref(db, `projects/${currentProjectId}/files`), projectData.files);
+            
+            closeModal('modal-add-file');
+            inp.value = '';
+            switchFile(fName);
+            showSnackbar(`Created ${fName}`);
         }
 
         async function autoSaveToFirebase() {
-            try {
-                if (!currentProjectId) return;
-                projectData.name = document.getElementById('inp-project-name').value;
-                projectData.lastModified = Date.now();
-                await update(ref(db, `projects/${currentProjectId}`), {
-                    name: projectData.name,
-                    lastModified: projectData.lastModified,
-                    files: projectData.files
-                });
-            } catch (error) {
-                console.error("Autosave failed:", error);
-                // Don't spam snackbar for autosave to avoid annoying the user while typing
-            }
+            if (!currentProjectId) return;
+            projectData.name = document.getElementById('inp-project-name').value;
+            projectData.lastModified = Date.now();
+            await update(ref(db, `projects/${currentProjectId}`), {
+                name: projectData.name,
+                lastModified: projectData.lastModified,
+                files: projectData.files
+            });
         }
 
         function downloadZip() {
-            try {
-                if (!projectData) return;
-                const zip = new JSZip();
-                projectData.files.forEach(file => zip.file(file.name, file.content));
-                zip.generateAsync({ type: "blob" }).then(blob => {
-                    saveAs(blob, `${projectData.name.replace(/\s+/g, '_')}.zip`);
-                    showSnackbar("Download started!");
-                });
-            } catch (error) {
-                showSnackbar("Zip failed: " + error.message);
-            }
+            if (!projectData) return;
+            const zip = new JSZip();
+            projectData.files.forEach(file => zip.file(file.name, file.content));
+            zip.generateAsync({ type: "blob" }).then(blob => {
+                saveAs(blob, `${projectData.name.replace(/\s+/g, '_')}.zip`);
+            });
         }
 
         function runProject() {
-            try {
-                if (!currentProjectId) return;
-                showSnackbar("Saving & running...");
-                autoSaveToFirebase(); 
-                setTimeout(() => {
-                    window.open(`${BASE_URL}/pub/${currentProjectId}`, '_blank');
-                }, 500); // Give it half a second to save
-            } catch (error) {
-                showSnackbar("Run failed: " + error.message);
-            }
+            if (!currentProjectId) return;
+            autoSaveToFirebase(); 
+            window.open(`${BASE_URL}/pub/${currentProjectId}`, '_blank');
         }
 
         function openShareModal() {
@@ -567,56 +517,46 @@
         }
 
         function applySettings() {
-            try {
-                const size = parseInt(document.getElementById('set-tabsize').value) || 2;
-                const wrap = document.getElementById('set-wordwrap').checked;
-                if (editor) {
-                    editor.setOption('tabSize', size);
-                    editor.setOption('indentUnit', size);
-                    editor.setOption('lineWrapping', wrap);
-                }
-                closeModal('modal-settings');
-                showSnackbar("Settings applied");
-            } catch (error) {
-                showSnackbar("Settings failed: " + error.message);
+            const size = parseInt(document.getElementById('set-tabsize').value) || 2;
+            const wrap = document.getElementById('set-wordwrap').checked;
+            if (editor) {
+                editor.setOption('tabSize', size);
+                editor.setOption('indentUnit', size);
+                editor.setOption('lineWrapping', wrap);
             }
+            closeModal('modal-settings');
+            showSnackbar("Settings applied");
         }
 
         // --- INIT & EVENTS ---
         async function init() {
-            try {
-                if (await handlePublicRoute()) return;
+            if (await handlePublicRoute()) return;
 
-                document.getElementById('btn-new-project').onclick = createProject;
-                document.getElementById('btn-back').onclick = () => { currentProjectId = null; projectData = null; loadProjects(); };
-                document.getElementById('btn-save-zip').onclick = downloadZip;
-                document.getElementById('btn-run').onclick = runProject;
-                document.getElementById('btn-share').onclick = openShareModal;
-                document.getElementById('btn-settings').onclick = () => document.getElementById('modal-settings').classList.add('active');
-                
-                document.getElementById('btn-save-settings').onclick = applySettings;
-                document.getElementById('btn-cancel-settings').onclick = () => closeModal('modal-settings');
-                
-                document.getElementById('btn-confirm-add-file').onclick = addNewFile;
-                document.getElementById('btn-cancel-file').onclick = () => closeModal('modal-add-file');
-                document.getElementById('inp-new-file').addEventListener('keypress', (e) => { if (e.key === 'Enter') addNewFile(); });
-                
-                document.getElementById('copy-pub').onclick = () => copyLink('link-public');
-                document.getElementById('copy-pvt').onclick = () => copyLink('link-private');
-                document.getElementById('btn-close-share').onclick = () => closeModal('modal-share');
+            document.getElementById('btn-new-project').onclick = createProject;
+            document.getElementById('btn-back').onclick = () => { currentProjectId = null; projectData = null; loadProjects(); };
+            document.getElementById('btn-save-zip').onclick = downloadZip;
+            document.getElementById('btn-run').onclick = runProject;
+            document.getElementById('btn-share').onclick = openShareModal;
+            document.getElementById('btn-settings').onclick = () => document.getElementById('modal-settings').classList.add('active');
+            
+            document.getElementById('btn-save-settings').onclick = applySettings;
+            document.getElementById('btn-cancel-settings').onclick = () => closeModal('modal-settings');
+            
+            document.getElementById('btn-confirm-add-file').onclick = addNewFile;
+            document.getElementById('btn-cancel-file').onclick = () => closeModal('modal-add-file');
+            document.getElementById('inp-new-file').addEventListener('keypress', (e) => { if (e.key === 'Enter') addNewFile(); });
+            
+            document.getElementById('copy-pub').onclick = () => copyLink('link-public');
+            document.getElementById('copy-pvt').onclick = () => copyLink('link-private');
+            document.getElementById('btn-close-share').onclick = () => closeModal('modal-share');
 
-                document.getElementById('toggle-wrap').addEventListener('click', function() {
-                    const cb = document.getElementById('set-wordwrap');
-                    cb.checked = !cb.checked;
-                    this.innerHTML = cb.checked ? 'check_box' : 'check_box_outline_blank';
-                });
+            document.getElementById('toggle-wrap').addEventListener('click', function() {
+                const cb = document.getElementById('set-wordwrap');
+                cb.checked = !cb.checked;
+                this.innerHTML = cb.checked ? 'check_box' : 'check_box_outline_blank';
+            });
 
-                loadProjects();
-            } catch (error) {
-                console.error("INIT FATAL ERROR:", error);
-                alert("Fatal Error starting app: " + error.message);
-                document.getElementById('loading').style.display = 'none'; // Hide spinner at least
-            }
+            loadProjects();
         }
 
         init();
