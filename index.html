@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AR Hand Tracking Fixed</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>High Speed AR Mesh</title>
     <style>
         body {
             margin: 0;
@@ -12,21 +12,20 @@
             overflow: hidden;
             width: 100vw;
             height: 100vh;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: sans-serif;
             touch-action: none;
         }
 
-        /* Background Camera Feed */
+        /* Video Background */
         #bg-video {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            object-fit: cover;
+            object-fit: cover; /* Fills screen */
             z-index: 0;
-            /* Mirror the video so it feels like a mirror */
-            transform: scaleX(-1);
+            transform: scaleX(-1); /* Mirror for natural feel */
         }
 
         /* 3D Overlay */
@@ -37,81 +36,72 @@
             width: 100vw;
             height: 100vh;
             z-index: 1;
-            /* Mirror the canvas to match video */
-            transform: scaleX(-1);
+            transform: scaleX(-1); /* Mirror to match video */
+            pointer-events: none; /* Let clicks pass through */
         }
 
-        /* UI Overlay */
-        #ui-layer {
+        /* Start Screen (Required for Fullscreen API) */
+        #start-screen {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 2;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        #status-bar {
-            color: #0f0;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 5px 10px;
-            font-size: 12px;
-            text-transform: uppercase;
-            align-self: flex-start;
-            border: 1px solid #0f0;
-        }
-
-        /* Loading Screen */
-        #loading {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            color: #0ff;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 20;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 10;
+            color: white;
+            text-align: center;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
         }
 
-        .spinner {
+        .icon {
+            font-size: 50px;
+            margin-bottom: 20px;
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            line-height: 80px;
+        }
+
+        h1 { margin: 0; text-transform: uppercase; letter-spacing: 2px; }
+        p { color: #aaa; margin-top: 10px; font-size: 0.9rem; }
+
+        /* Loading Spinner (Hidden initially) */
+        #loader {
+            display: none;
             width: 40px;
             height: 40px;
-            border: 4px solid #333;
-            border-top: 4px solid #0ff;
+            border: 3px solid #fff;
+            border-top: 3px solid transparent;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-bottom: 20px;
+            margin-top: 20px;
         }
 
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <!-- Loading -->
-    <div id="loading">
-        <div class="spinner"></div>
-        <h2>INITIALIZING AI...</h2>
+    <!-- Start Overlay -->
+    <div id="start-screen" onclick="initExperience()">
+        <div class="icon">▶</div>
+        <h1>Start AR Experience</h1>
+        <p>Click to enable Fullscreen & Rear Camera</p>
+        <div id="loader"></div>
     </div>
 
-    <!-- Video & 3D -->
-    <video id="bg-video" playsinline></video>
+    <!-- Background Video -->
+    <video id="bg-video" playsinline muted></video>
+
+    <!-- 3D Canvas -->
     <canvas id="output-canvas"></canvas>
-
-    <!-- UI -->
-    <div id="ui-layer">
-        <div id="status-bar">System Standby</div>
-    </div>
 
     <!-- Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -119,46 +109,62 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
     <script>
-        /**
-         * CONFIG
-         */
+        // --- CONFIGURATION ---
         const config = {
-            smoothness: 0.6, // Lerp factor
-            handScale: 2.5   // Size of the virtual hand
+            smoothness: 0.85, // Higher = faster/snappier tracking
+            handScale: 2.2,   // Base scale of the mesh
+            shadowIntensity: 0.5
         };
 
-        const state = {
-            leftHandVisible: false,
-            rightHandVisible: false
-        };
+        // --- STATE & DOM ---
+        let isRunning = false;
+        const videoElement = document.getElementById('bg-video');
+        const canvasElement = document.getElementById('output-canvas');
+        const startScreen = document.getElementById('start-screen');
+        const loader = document.getElementById('loader');
+        const title = startScreen.querySelector('h1');
 
-        const uiStatus = document.getElementById('status-bar');
-        const loadingScreen = document.getElementById('loading');
-
-        /**
-         * THREE.JS SETUP
-         */
+        // --- THREE.JS SETUP ---
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.z = 2;
+        
+        // Camera Setup
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.z = 5;
 
+        // Renderer Setup (Shadows Enabled)
         const renderer = new THREE.WebGLRenderer({
-            canvas: document.getElementById('output-canvas'),
-            alpha: true,
-            antialias: false,
+            canvas: canvasElement,
+            alpha: true, // Transparent background
+            antialias: true,
             powerPreference: "high-performance"
         });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true; // Enable Shadows
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-        // Lighting
-        const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(2, 5, 5);
-        scene.add(light);
-        scene.add(new THREE.AmbientLight(0x404040, 1.5));
+        // Lighting (Crucial for White Mesh)
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight.position.set(5, 10, 7);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        scene.add(dirLight);
+
+        // Shadow Catcher (Invisible floor to catch shadow)
+        const planeGeometry = new THREE.PlaneGeometry(20, 20);
+        const planeMaterial = new THREE.ShadowMaterial({ opacity: config.shadowIntensity, color: 0x000000 });
+        const shadowPlane = new THREE.Mesh(planeGeometry, planeMaterial);
+        shadowPlane.rotation.x = -Math.PI / 2;
+        shadowPlane.position.y = -2; // Positioned below the hand
+        shadowPlane.receiveShadow = true;
+        scene.add(shadowPlane);
 
         /**
-         * HAND MESH CLASS
+         * HAND MESH CLASS (Solid White Mesh)
          */
         const HAND_CONNECTIONS = [
             [0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8],
@@ -166,78 +172,84 @@
             [0, 17], [17, 18], [18, 19], [19, 20], [5, 9], [9, 13], [13, 17]
         ];
 
-        class CyberHand {
-            constructor(color) {
-                this.group = new THREE.Group();
+        class SolidHand {
+            constructor() {
+                this.meshGroup = new THREE.Group();
                 this.joints = [];
                 this.bones = [];
                 this.currentPos = []; 
                 this.targetPos = [];
                 
-                // Init positions
                 for(let i=0; i<21; i++) {
                     this.currentPos.push(new THREE.Vector3());
                     this.targetPos.push(new THREE.Vector3());
                 }
 
-                this.group.visible = false; // Hidden by default
-                scene.add(this.group);
+                this.meshGroup.visible = false;
+                scene.add(this.meshGroup);
 
-                // Materials
-                const jointMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.1, metalness: 0.5 });
-                const boneMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+                // Material: White, Mesh, Shadows
+                const material = new THREE.MeshPhysicalMaterial({
+                    color: 0xffffff,
+                    roughness: 0.4,
+                    metalness: 0.1,
+                    flatShading: true, // Low-poly mesh look
+                    clearcoat: 0.1
+                });
 
-                // Create Meshes
-                const sGeo = new THREE.IcosahedronGeometry(0.03, 0); // Low poly sphere
+                // Create Joints (Spheres)
+                const sGeo = new THREE.SphereGeometry(0.06, 16, 12);
                 for (let i = 0; i < 21; i++) {
-                    const mesh = new THREE.Mesh(sGeo, jointMat);
+                    const mesh = new THREE.Mesh(sGeo, material);
+                    mesh.castShadow = true;
                     this.joints.push(mesh);
-                    this.group.add(mesh);
+                    this.meshGroup.add(mesh);
                 }
 
-                const cGeo = new THREE.CylinderGeometry(0.015, 0.015, 1, 6);
+                // Create Bones (Cylinders)
+                const cGeo = new THREE.CylinderGeometry(0.05, 0.05, 1, 12);
                 cGeo.translate(0, 0.5, 0); 
                 cGeo.rotateX(Math.PI / 2);
                 
                 for (let i = 0; i < HAND_CONNECTIONS.length; i++) {
-                    const mesh = new THREE.Mesh(cGeo, boneMat);
+                    const mesh = new THREE.Mesh(cGeo, material);
+                    mesh.castShadow = true;
                     this.bones.push({ mesh: mesh, start: HAND_CONNECTIONS[i][0], end: HAND_CONNECTIONS[i][1] });
-                    this.group.add(mesh);
+                    this.meshGroup.add(mesh);
                 }
             }
 
-            update(landmarks, aspect) {
+            update(landmarks, aspectRatio) {
                 if (!landmarks) {
-                    this.group.visible = false;
+                    this.meshGroup.visible = false;
                     return;
                 }
-                this.group.visible = true;
+                this.meshGroup.visible = true;
 
-                // 1. Calculate Target Positions
+                // COORDINATE FIX:
+                // MediaPipe gives 0-1. We must adjust based on screen aspect ratio.
+                // If screen is wide (Landscape), X needs to be scaled up.
+                // If screen is tall (Portrait), X needs to be scaled down.
                 const scale = config.handScale;
+                const xScale = scale * aspectRatio; 
                 
-                // Adjust X for aspect ratio so hand isn't stretched
-                const xFactor = scale * aspect; 
-
                 for (let i = 0; i < 21; i++) {
-                    // MediaPipe coords: 0..1
                     const lm = landmarks[i];
-                    
-                    // Map to 3D world space (Center is 0,0)
-                    const x = (lm.x - 0.5) * xFactor;
-                    const y = (0.5 - lm.y) * scale; // Flip Y for 3D
-                    const z = -lm.z * scale;        // Depth
+                    // Flip X and Y for 3D world space
+                    const x = (lm.x - 0.5) * xScale; 
+                    const y = (0.5 - lm.y) * scale; 
+                    const z = -lm.z * scale;
 
                     this.targetPos[i].set(x, y, z);
                 }
 
-                // 2. Smooth Joints (Lerp)
+                // Smooth Movement (Lerp)
                 for (let i = 0; i < 21; i++) {
                     this.currentPos[i].lerp(this.targetPos[i], config.smoothness);
                     this.joints[i].position.copy(this.currentPos[i]);
                 }
 
-                // 3. Update Bones
+                // Update Bones
                 for (let i = 0; i < this.bones.length; i++) {
                     const b = this.bones[i];
                     const p1 = this.currentPos[b.start];
@@ -250,80 +262,93 @@
             }
         }
 
-        const leftHand = new CyberHand(0xff0055); // Red/Pink
-        const rightHand = new CyberHand(0x00aaff); // Blue
+        const hand = new SolidHand(); // One single hand mesh for max performance
 
         /**
-         * MEDIAPIPE SETUP
+         * MEDIAPIPE SETUP (SPEED OPTIMIZED)
          */
         const hands = new Hands({locateFile: (file) => {
             return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
         }});
 
         hands.setOptions({
-            maxNumHands: 2,
-            modelComplexity: 0, // 0=Lite (Fastest), 1=Full. Use 0 for low RAM.
-            minDetectionConfidence: 0.5, // Lowered sensitivity
-            minTrackingConfidence: 0.5
+            maxNumHands: 1, // Track 1 hand for max speed
+            modelComplexity: 0, // 0 = Lite (Fastest)
+            minDetectionConfidence: 0.6,
+            minTrackingConfidence: 0.6
         });
 
         hands.onResults((results) => {
-            // Remove loading screen on first frame
-            loadingScreen.style.display = 'none';
+            if (!isRunning) return;
+            
+            const aspect = window.innerWidth / window.innerHeight;
 
-            // Default to hidden
-            leftHand.group.visible = false;
-            rightHand.group.visible = false;
-            let status = "Waiting for hands...";
-
-            if (results.multiHandLandmarks && results.multiHandedness) {
-                const aspect = window.innerWidth / window.innerHeight;
-                
-                for (let i = 0; i < results.multiHandLandmarks.length; i++) {
-                    const label = results.multiHandedness[i].label;
-                    const landmarks = results.multiHandLandmarks[i];
-
-                    if (label === 'Left') {
-                        leftHand.update(landmarks, aspect);
-                        status = "Tracking Left Hand";
-                    } else {
-                        rightHand.update(landmarks, aspect);
-                        status = "Tracking Right Hand";
-                    }
-                    
-                    if (results.multiHandLandmarks.length === 2) status = "Tracking Both Hands";
-                }
+            if (results.multiHandLandmarks) {
+                // Just take the first hand found
+                hand.update(results.multiHandLandmarks[0], aspect);
             } else {
-                status = "No hands detected";
+                hand.meshGroup.visible = false;
             }
-
-            uiStatus.innerText = status;
         });
 
         /**
-         * CAMERA START
+         * INITIALIZATION & CAMERA
          */
-        const videoElement = document.getElementById('bg-video');
+        async function initExperience() {
+            // 1. Request Full Screen (Requires User Action)
+            try {
+                if (document.documentElement.requestFullscreen) {
+                    await document.documentElement.requestFullscreen();
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    await document.documentElement.webkitRequestFullscreen(); // iOS/Safari
+                }
+            } catch (e) { console.log("Fullscreen denied", e); }
 
-        const cameraUtils = new Camera(videoElement, {
-            onFrame: async () => {
-                await hands.send({image: videoElement});
-            },
-            width: 640, // Lower resolution for speed (640x360 or 640x480)
-            height: 480
-        });
+            // 2. Update UI
+            title.innerText = "Loading AI...";
+            document.querySelector('.icon').style.display = 'none';
+            loader.style.display = 'block';
 
-        // Start camera
-        cameraUtils.start()
-            .then(() => {
-                console.log("Camera started");
-                uiStatus.innerText = "System Active";
-            })
-            .catch(err => {
+            // 3. Start Camera (Rear Priority)
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: { ideal: "environment" }, // REAR CAMERA
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    },
+                    audio: false
+                });
+
+                videoElement.srcObject = stream;
+                await videoElement.play();
+
+                // 4. Start Loop
+                isRunning = true;
+                startScreen.style.opacity = '0';
+                setTimeout(() => startScreen.style.display = 'none', 500);
+                startCameraProcessing();
+
+            } catch (err) {
                 console.error(err);
-                uiStatus.innerText = "Error: " + err.message;
-                uiStatus.style.color = "red";
+                title.innerText = "Camera Error";
+                title.style.color = "red";
+                loader.style.display = 'none';
+                alert("Could not access rear camera. Ensure you are using HTTPS or localhost.");
+            }
+        }
+
+        function startCameraProcessing() {
+            // Use MediaPipe Camera Utils for robust frame handling
+            const cameraUtils = new Camera(videoElement, {
+                onFrame: async () => {
+                    await hands.send({image: videoElement});
+                },
+                width: 640, // Low resolution for speed
+                height: 480
             });
+            cameraUtils.start();
+        }
 
         /**
          * RENDER LOOP
